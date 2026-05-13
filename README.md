@@ -1,8 +1,20 @@
+<div align="center">
+
 # Transparência Social
 
-Plataforma web para gestão de projetos sociais com prestação de contas estruturada entre organizações e financiadores.
+**Plataforma multi-tenant de gestão de projetos sociais com prestação de contas estruturada entre organizações e financiadores.**
 
-Desenvolvida em Next.js 14 (App Router) com Supabase como backend — autenticação, banco de dados PostgreSQL e armazenamento de arquivos.
+[![Live Demo](https://img.shields.io/badge/Live-Demo-000000?style=for-the-badge&logo=vercel)](https://transparencia-social-fase1.vercel.app)
+[![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=for-the-badge&logo=next.js)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Supabase](https://img.shields.io/badge/Supabase-Postgres-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
+[![Tailwind](https://img.shields.io/badge/Tailwind-3-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+
+[**Demo ao vivo**](https://transparencia-social-fase1.vercel.app) · [Documentação](./docs) · [Diagrama de fluxo](./docs/diagrams)
+
+</div>
+
+---
 
 ## Demonstração
 
