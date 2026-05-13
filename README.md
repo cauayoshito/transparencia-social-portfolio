@@ -4,14 +4,11 @@ Plataforma web para gestão de projetos sociais com prestação de contas estrut
 
 Desenvolvida em Next.js 14 (App Router) com Supabase como backend — autenticação, banco de dados PostgreSQL e armazenamento de arquivos.
 
----
-
 ## Demonstração
 
-> **Screenshots:** veja [`docs/screenshots/`](docs/screenshots/) para capturas de tela das principais telas.  
-> **Diagrama de fluxo:** [`docs/diagrams/fluxo-transparencia-social.mermaid`](docs/diagrams/fluxo-transparencia-social.mermaid)
+**Screenshots:** veja [`docs/screenshots/`](docs/screenshots/) para capturas de tela das principais telas.
 
----
+**Diagrama de fluxo:** [`docs/diagrams/fluxo-transparencia-social.mermaid`](docs/diagrams/fluxo-transparencia-social.mermaid)
 
 ## Funcionalidades
 
@@ -44,8 +41,6 @@ Desenvolvida em Next.js 14 (App Router) com Supabase como backend — autentica�
 - Service Role isolado em server actions — nunca exposto ao cliente
 - 20+ migrations documentando evolução incremental do schema
 
----
-
 ## Stack
 
 | Camada | Tecnologia |
@@ -56,8 +51,6 @@ Desenvolvida em Next.js 14 (App Router) com Supabase como backend — autentica�
 | Estilo | Tailwind CSS |
 | Ícones | Lucide React |
 | Deploy | Vercel (recomendado) |
-
----
 
 ## Estrutura do projeto
 
@@ -83,8 +76,6 @@ supabase/migrations/      # 20+ migrations — histórico completo do schema
 lib/supabase/             # Clients: browser, server, admin (service role)
 types/                    # Types TypeScript compartilhados
 ```
-
----
 
 ## Rodando localmente
 
@@ -137,8 +128,6 @@ npm run dev
 ```
 
 Acesse `http://localhost:3000`.
-
----
 
 ## Fluxo de onboarding
 
