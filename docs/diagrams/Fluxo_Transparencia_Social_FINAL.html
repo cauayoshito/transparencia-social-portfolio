@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transparência Social — Fluxo Completo do Sistema</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.0/mermaid.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  :root {
+    --primary: #4f46e5;
+    --primary-light: #e0e7ff;
+    --org: #6366f1;
+    --org-bg: #eef2ff;
+    --consultant: #8b5cf6;
+    --consultant-bg: #f5f3ff;
+    --investor: #0891b2;
+    --investor-bg: #ecfeff;
+    --approved: #059669;
+    --approved-bg: #ecfdf5;
+    --returned: #dc2626;
+    --returned-bg: #fef2f2;
+    --draft: #d97706;
+    --draft-bg: #fffbeb;
+    --submitted: #2563eb;
+    --submitted-bg: #eff6ff;
+    --text: #1e293b;
+    --text-secondary: #64748b;
+    --border: #e2e8f0;
+    --bg: #f8fafc;
+    --white: #ffffff;
+    --code-bg: #f1f5f9;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* ===== COVER ===== */
+  .cover {
+    background: linear-gradient(135deg, #4338ca 0%, #6d28d9 40%, #4f46e5 100%);
+    color: white;
+    padding: 80px 60px;
+    min-height: 45vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 500px;
+    height: 500px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 50%;
+  }
+  .cover-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    width: fit-content;
+  }
+  .cover h1 {
+    font-size: 44px;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 14px;
+    letter-spacing: -0.5px;
+  }
+  .cover .subtitle {
+    font-size: 18px;
+    opacity: 0.8;
+    max-width: 620px;
+    line-height: 1.6;
+    font-weight: 300;
+  }
+  .cover-meta {
+    margin-top: 48px;
+    display: flex;
+    gap: 24px;
+    font-size: 12px;
+    opacity: 0.5;
+    font-weight: 500;
+  }
+
+  /* ===== TOC ===== */
+  .toc {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 32px 60px;
+  }
+  .toc-inner {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .toc h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+  .toc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 32px;
+  }
+  .toc-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 14px;
+    transition: color 0.2s;
+  }
+  .toc-item:hover { color: var(--primary); }
+  .toc-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: var(--primary-light);
+    color: var(--primary);
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* ===== LAYOUT ===== */
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 56px 40px;
+  }
+
+  /* ===== SECTIONS ===== */
+  .section {
+    margin-bottom: 64px;
+    scroll-margin-top: 20px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .section-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--primary);
+    color: white;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+  .section h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .section h3 {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 12px;
+    margin-top: 28px;
+  }
+  .section p {
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+    line-height: 1.8;
+  }
+
+  /* ===== CARDS ===== */
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    margin-bottom: 16px;
+  }
+  .card p { color: var(--text); font-size: 15px; line-height: 1.85; }
+
+  /* ===== ROLE CARDS ===== */
+  .role-card {
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 16px;
+    border-left: 4px solid;
+  }
+  .role-card.org { background: var(--org-bg); border-color: var(--org); }
+  .role-card.consultant { background: var(--consultant-bg); border-color: var(--consultant); }
+  .role-card.investor { background: var(--investor-bg); border-color: var(--investor); }
+  .role-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    color: white;
+  }
+  .role-card.org .role-tag { background: var(--org); }
+  .role-card.consultant .role-tag { background: var(--consultant); }
+  .role-card.investor .role-tag { background: var(--investor); }
+  .role-card h3 { margin-top: 0; margin-bottom: 14px; font-size: 18px; }
+  .role-card .desc { color: var(--text-secondary); font-size: 14px; margin-bottom: 16px; line-height: 1.6; }
+  .role-card ul { list-style: none; padding: 0; }
+  .role-card li {
+    padding: 7px 0 7px 22px;
+    position: relative;
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .role-card li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 14px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .role-card.org li::before { background: var(--org); }
+  .role-card.consultant li::before { background: var(--consultant); }
+  .role-card.investor li::before { background: var(--investor); }
+  .role-highlight {
+    font-size: 13px;
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .role-card.org .role-highlight { background: rgba(99,102,241,0.08); }
+  .role-card.consultant .role-highlight { background: rgba(139,92,246,0.08); }
+  .role-card.investor .role-highlight { background: rgba(8,145,178,0.08); }
+
+  /* ===== PERMISSIONS TABLE ===== */
+  .perms-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--white);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    font-size: 13px;
+    margin-top: 20px;
+  }
+  .perms-table th {
+    background: var(--primary);
+    color: white;
+    padding: 13px 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .perms-table td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  .perms-table tr:last-child td { border-bottom: none; }
+  .perms-table tr:nth-child(even) td { background: #f8fafc; }
+  .perm-yes { color: var(--approved); font-weight: 600; }
+  .perm-no { color: #cbd5e1; }
+  .perm-cond { color: var(--draft); font-weight: 500; font-size: 12px; }
+
+  /* ===== RULES ===== */
+  .rule-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 14px 20px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    transition: box-shadow 0.2s;
+  }
+  .rule-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .rule-num {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    background: var(--primary-light);
+    color: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    margin-right: 14px;
+    margin-top: 1px;
+  }
+  .rule-text { color: var(--text); font-size: 14px; line-height: 1.65; }
+  .rule-source {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: var(--code-bg);
+    color: var(--text-secondary);
+    font-family: monospace;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  /* ===== FLOW TEXT ===== */
+  .flow-text {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 36px;
+    font-size: 14px;
+    line-height: 2.2;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .flow-step { display: flex; align-items: flex-start; margin-bottom: 4px; }
+  .flow-indent { padding-left: 32px; }
+  .flow-indent-2 { padding-left: 64px; }
+  .flow-arrow { color: var(--primary); font-weight: 600; margin-right: 10px; flex-shrink: 0; }
+  .flow-decision { color: var(--primary); font-weight: 600; }
+  .flow-yes { color: var(--approved); font-weight: 600; }
+  .flow-no { color: var(--returned); font-weight: 600; }
+  .flow-label {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    vertical-align: middle;
+    margin-left: 4px;
+  }
+  .label-draft { background: var(--draft-bg); color: var(--draft); border: 1px solid var(--draft); }
+  .label-submitted { background: var(--submitted-bg); color: var(--submitted); border: 1px solid var(--submitted); }
+  .label-approved { background: var(--approved-bg); color: var(--approved); border: 1px solid var(--approved); }
+  .label-returned { background: var(--returned-bg); color: var(--returned); border: 1px solid var(--returned); }
+
+  /* ===== MERMAID ===== */
+  .mermaid-wrapper {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    overflow-x: auto;
+  }
+
+  /* ===== STATUS PILLS ===== */
+  .status-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 20px 0;
+  }
+  .status-pill {
+    padding: 8px 18px;
+    border-radius: 24px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .status-pill.draft { background: var(--draft-bg); color: var(--draft); border: 2px solid var(--draft); }
+  .status-pill.submitted { background: var(--submitted-bg); color: var(--submitted); border: 2px solid var(--submitted); }
+  .status-pill.approved { background: var(--approved-bg); color: var(--approved); border: 2px solid var(--approved); }
+  .status-pill.returned { background: var(--returned-bg); color: var(--returned); border: 2px solid var(--returned); }
+  .status-arrow { font-size: 20px; color: var(--text-secondary); }
+
+  /* ===== BRUNO CARD ===== */
+  .bruno-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+    border: 2px solid var(--primary);
+    border-radius: 16px;
+    padding: 40px;
+  }
+  .bruno-card p { color: var(--text); font-size: 15px; line-height: 1.9; margin-bottom: 16px; }
+  .bruno-card p:last-child { margin-bottom: 0; }
+
+  /* ===== APPENDIX ===== */
+  .tech-file {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .tech-file-header {
+    background: var(--code-bg);
+    padding: 12px 20px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tech-file-header .file-icon {
+    width: 16px;
+    height: 16px;
+    background: var(--primary);
+    border-radius: 3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 9px;
+    font-weight: 800;
+    font-family: 'Inter', sans-serif;
+  }
+  .tech-file-body {
+    padding: 16px 20px;
+  }
+  .tech-file-body p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    line-height: 1.6;
+  }
+  .tech-fn {
+    display: inline-block;
+    background: var(--code-bg);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--primary);
+    font-weight: 600;
+  }
+  .tech-check {
+    font-size: 13px;
+    color: var(--text);
+    padding: 4px 0;
+    padding-left: 18px;
+    position: relative;
+    line-height: 1.6;
+  }
+  .tech-check::before {
+    content: '>';
+    position: absolute;
+    left: 0;
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 12px;
+  }
+
+  /* ===== DIVIDER ===== */
+  .divider { height: 1px; background: var(--border); margin: 48px 0; }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    background: var(--primary);
+    color: white;
+    text-align: center;
+    padding: 20px;
+    font-size: 12px;
+    opacity: 0.95;
+    font-weight: 400;
+  }
+
+  /* ===== PRINT ===== */
+  @media print {
+    .cover { min-height: auto; padding: 40px; break-after: page; }
+    .container { padding: 20px; }
+    body { font-size: 12px; }
+    .section { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================= CAPA ============================= -->
+<div class="cover">
+  <span class="cover-badge">Documento de Alinhamento de Produto</span>
+  <h1>Transparência Social</h1>
+  <p class="subtitle">
+    Fluxo completo do sistema — jornada dos perfis, regras de negócio implementadas
+    e fluxo de aprovação de relatórios.
+  </p>
+  <div class="cover-meta">
+    <span>Versão 1.0</span>
+    <span>Abril 2026</span>
+    <span>Material para apresentação ao cliente</span>
+  </div>
+</div>
+
+<!-- ============================= ÍNDICE ============================= -->
+<div class="toc">
+  <div class="toc-inner">
+    <h2>Conteúdo</h2>
+    <div class="toc-grid">
+      <a href="#s1" class="toc-item"><span class="toc-num">1</span> Resumo Executivo</a>
+      <a href="#s5" class="toc-item"><span class="toc-num">5</span> Fluxo Visual em Texto</a>
+      <a href="#s2" class="toc-item"><span class="toc-num">2</span> Fluxo Geral do Sistema</a>
+      <a href="#s6" class="toc-item"><span class="toc-num">6</span> Fluxograma Mermaid</a>
+      <a href="#s3" class="toc-item"><span class="toc-num">3</span> Fluxo por Perfil</a>
+      <a href="#s7" class="toc-item"><span class="toc-num">7</span> Versão para Apresentação</a>
+      <a href="#s4" class="toc-item"><span class="toc-num">4</span> Regras de Negócio Implementadas</a>
+      <a href="#s8" class="toc-item"><span class="toc-num">8</span> Apêndice Técnico</a>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ===================== 1. RESUMO EXECUTIVO ===================== -->
+<div class="section" id="s1">
+  <div class="section-header">
+    <span class="section-number">1</span>
+    <h2>Resumo Executivo</h2>
+  </div>
+  <div class="card">
+    <p>
+      O <strong>Transparência Social</strong> é uma plataforma de prestação de contas para projetos sociais.
+      A <strong>Organização</strong> responsável pelo projeto cria relatórios periódicos, preenche os dados
+      de execução e financeiros (itens de orçamento, gastos, remanejamentos, comprovantes e extratos bancários),
+      e os envia para análise.
+    </p>
+    <p>
+      A análise e aprovação segue uma regra dinâmica: se o projeto possui um <strong>Consultor</strong> ativo
+      vinculado, é ele quem analisa e decide. Se não há Consultor, o <strong>Investidor</strong> (financiador)
+      assume esse papel diretamente.
+    </p>
+    <p>
+      Caso o relatório seja devolvido, a Organização recebe o comentário do analista, corrige e reenvia —
+      esse ciclo se repete até a aprovação final. Uma vez aprovado, o relatório é travado e todos os dados
+      financeiros são consolidados automaticamente na aba Financeiro do projeto.
+    </p>
+    <p>
+      O sistema possui três perfis com papéis claros: a <strong>Organização</strong> opera (cria, preenche, envia);
+      o <strong>Consultor</strong>, quando presente, analisa e aprova; o <strong>Investidor</strong> aprova
+      diretamente quando não há Consultor, e sempre mantém visibilidade total.
+    </p>
+  </div>
+</div>
+
+<!-- ===================== 2. FLUXO GERAL ===================== -->
+<div class="section" id="s2">
+  <div class="section-header">
+    <span class="section-number">2</span>
+    <h2>Fluxo Geral do Sistema</h2>
+  </div>
+
+  <p>O ciclo de vida de um relatório no Transparência Social segue uma jornada com quatro status possíveis e papéis bem definidos em cada etapa.</p>
+
+  <h3>Status do Relatório</h3>
+  <div class="status-flow">
+    <span class="status-pill draft">Rascunho</span>
+    <span class="status-arrow">&rarr;</span>
+    <span class="status-pill submitted">Enviado</span>
+    <span class="status-arrow">&rarr;</span>
+    <span class="status-pill approved">Aprovado</span>
+  </div>
+  <div class="status-flow" style="margin-top: 8px;">
+    <span class="status-pill submitted">Enviado</span>
+    <span class="status-arrow">&rarr;</span>
+    <span class="status-pill returned">Devolvido</span>
+    <span class="status-arrow">&rarr;</span>
+    <span class="status-pill draft">Rascunho</span>
+    <span style="color:var(--text-secondary); font-size: 13px; font-style: italic;">(ciclo de ajustes)</span>
+  </div>
+
+  <h3>Transições Implementadas</h3>
+  <div class="card" style="padding: 20px 28px;">
+    <p style="font-size: 14px; margin-bottom: 0;">
+      <strong style="color: var(--draft);">RASCUNHO</strong> &rarr; <strong style="color: var(--submitted);">ENVIADO</strong> (Organização envia para análise)<br>
+      <strong style="color: var(--submitted);">ENVIADO</strong> &rarr; <strong style="color: var(--approved);">APROVADO</strong> (Consultor ou Investidor aprova)<br>
+      <strong style="color: var(--submitted);">ENVIADO</strong> &rarr; <strong style="color: var(--returned);">DEVOLVIDO</strong> (Consultor ou Investidor devolve)<br>
+      <strong style="color: var(--returned);">DEVOLVIDO</strong> &rarr; <strong style="color: var(--submitted);">ENVIADO</strong> (Organização ajusta e reenvia)<br>
+      <strong style="color: var(--approved);">APROVADO</strong> &rarr; <em style="color: var(--text-secondary);">nenhuma transição (status final, travado)</em>
+    </p>
+  </div>
+
+  <h3>Jornada Completa</h3>
+  <p>
+    A Organização cria um novo relatório para o projeto, que nasce com status <strong>Rascunho</strong>.
+    Neste estágio, a Organização preenche todas as seções: dados gerais de execução, itens financeiros
+    (orçamento planejado, gastos por período, remanejamentos), comprovantes de despesas (notas fiscais e recibos)
+    e extratos bancários.
+  </p>
+  <p>
+    Ao concluir o preenchimento, a Organização envia o relatório para análise. O status muda para <strong>Enviado</strong>
+    e o relatório fica bloqueado para edição. Neste ponto, o sistema verifica automaticamente se o projeto
+    possui um Consultor ativo vinculado.
+  </p>
+  <p>
+    Se houver Consultor, ele é quem receberá o relatório para análise e terá autoridade para aprovar ou devolver.
+    Caso contrário, o Investidor assume a análise. O analista responsável tem duas opções:
+    <strong>aprovar</strong> o relatório (status final: Aprovado) ou <strong>devolver para ajustes</strong>
+    (status: Devolvido), obrigatoriamente incluindo um comentário com o que precisa ser corrigido.
+  </p>
+  <p>
+    Se devolvido, a Organização recebe o relatório de volta, faz os ajustes necessários e reenvia.
+    Esse ciclo se repete quantas vezes for necessário até a aprovação. Ao ser aprovado, o relatório é
+    permanentemente travado e todos os dados financeiros ficam disponíveis na visão consolidada do projeto.
+  </p>
+
+  <h3>Módulo Financeiro</h3>
+  <p>
+    Os dados financeiros são preenchidos <strong>dentro de cada relatório</strong>, em tabelas normalizadas
+    separadas por categoria: itens financeiros (seção 12), remanejamentos (seção 13), comprovantes de
+    despesas com upload de arquivos (seção 14) e extratos bancários (seção 15).
+  </p>
+  <p>
+    A aba <strong>Financeiro do Projeto</strong> exibe uma visão consolidada automaticamente, agregando
+    os dados financeiros de todos os relatórios do projeto. Essa visão inclui totais de orçamento planejado,
+    gastos realizados, valor total de comprovantes e contagem de extratos bancários.
+  </p>
+</div>
+
+<!-- ===================== 3. FLUXO POR PERFIL ===================== -->
+<div class="section" id="s3">
+  <div class="section-header">
+    <span class="section-number">3</span>
+    <h2>Fluxo por Perfil</h2>
+  </div>
+
+  <!-- ORGANIZAÇÃO -->
+  <div class="role-card org">
+    <span class="role-tag">Perfil Principal</span>
+    <h3>Organização</h3>
+    <p class="desc">
+      A Organização é o perfil operacional do sistema. É sempre ela quem inicia e conduz o preenchimento dos relatórios.
+    </p>
+    <ul>
+      <li><strong>Cria</strong> novos relatórios dentro dos projetos que administra</li>
+      <li><strong>Preenche</strong> todas as seções: dados de execução, itens financeiros, comprovantes e extratos</li>
+      <li><strong>Envia</strong> o relatório para análise quando o preenchimento está completo (exige ao menos 1 comprovante)</li>
+      <li><strong>Edita</strong> relatórios em Rascunho e também relatórios Devolvidos (após devolução pelo analista)</li>
+      <li><strong>Reabre</strong> relatórios devolvidos para edição antes de reenviar</li>
+      <li><strong>Não participa</strong> da decisão de aprovação — essa responsabilidade é do Consultor ou do Investidor</li>
+    </ul>
+    <div class="role-highlight">
+      <strong>Quando o relatório é devolvido:</strong> A Organização recebe o relatório com status "Devolvido" junto
+      ao comentário do analista explicando os ajustes. Pode então editar o conteúdo, corrigir os pontos indicados e
+      reenviar para nova análise. O ciclo se repete quantas vezes for necessário.
+    </div>
+  </div>
+
+  <!-- CONSULTOR -->
+  <div class="role-card consultant">
+    <span class="role-tag">Perfil Especializado</span>
+    <h3>Consultor</h3>
+    <p class="desc">
+      O Consultor é vinculado a projetos específicos. Nem todo projeto possui Consultor — apenas aqueles que têm
+      um consultor ativo na tabela de vínculo do projeto.
+    </p>
+    <ul>
+      <li><strong>Entra no fluxo</strong> quando está vinculado e marcado como ativo em um projeto específico</li>
+      <li><strong>Analisa</strong> os relatórios enviados pela Organização que estejam com status Enviado</li>
+      <li><strong>Aprova</strong> ou <strong>devolve</strong> os relatórios — sua decisão é final</li>
+      <li><strong>Substitui completamente o Investidor</strong> na função de análise — quando existe Consultor, o Investidor não pode aprovar ou devolver</li>
+      <li><strong>Não cria, não edita, não envia</strong> relatórios — seu papel é exclusivamente de análise e decisão</li>
+    </ul>
+    <div class="role-highlight">
+      <strong>Quando não participa:</strong> Se o Consultor não está vinculado ao projeto ou não está marcado como ativo,
+      ele não tem papel nenhum no fluxo de aprovação daquele projeto. Nesse cenário, o Investidor assume diretamente.
+    </div>
+  </div>
+
+  <!-- INVESTIDOR -->
+  <div class="role-card investor">
+    <span class="role-tag">Perfil Financiador</span>
+    <h3>Investidor</h3>
+    <p class="desc">
+      O Investidor é o financiador do projeto. Seu nível de envolvimento operacional na aprovação
+      depende da existência de um Consultor.
+    </p>
+    <ul>
+      <li><strong>Analisa e aprova diretamente</strong> quando o projeto <em>não</em> possui Consultor ativo vinculado</li>
+      <li><strong>Não participa da aprovação</strong> quando o projeto <em>possui</em> Consultor — a decisão é inteiramente do Consultor</li>
+      <li><strong>Tem visibilidade total</strong> sobre os projetos, relatórios e dados financeiros consolidados</li>
+      <li><strong>Pode criar</strong> relatórios e editar rascunhos iniciais, quando necessário</li>
+      <li><strong>Pode enviar</strong> relatórios em status Rascunho</li>
+    </ul>
+    <div class="role-highlight">
+      <strong>Regra principal:</strong> O Investidor atua diretamente na aprovação apenas nos projetos sem Consultor.
+      Nos projetos com Consultor, ele mantém visibilidade completa, mas a decisão de aprovação é delegada ao Consultor.
+    </div>
+  </div>
+
+  <h3>Quadro de Permissões por Ação</h3>
+  <table class="perms-table">
+    <thead>
+      <tr>
+        <th style="width:35%">Ação</th>
+        <th style="width:22%">Organização</th>
+        <th style="width:22%">Consultor</th>
+        <th style="width:21%">Investidor</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Criar relatório</td>
+        <td class="perm-yes">Sim</td>
+        <td class="perm-no">—</td>
+        <td class="perm-yes">Sim</td>
+      </tr>
+      <tr>
+        <td>Editar rascunho</td>
+        <td class="perm-yes">Sim</td>
+        <td class="perm-no">—</td>
+        <td class="perm-yes">Sim</td>
+      </tr>
+      <tr>
+        <td>Editar após devolução</td>
+        <td class="perm-yes">Sim</td>
+        <td class="perm-no">—</td>
+        <td class="perm-no">—</td>
+      </tr>
+      <tr>
+        <td>Enviar para análise</td>
+        <td class="perm-yes">Sim</td>
+        <td class="perm-no">—</td>
+        <td class="perm-yes">Sim</td>
+      </tr>
+      <tr>
+        <td>Aprovar relatório</td>
+        <td class="perm-no">—</td>
+        <td><span class="perm-cond">Se ativo no projeto</span></td>
+        <td><span class="perm-cond">Se não houver consultor</span></td>
+      </tr>
+      <tr>
+        <td>Devolver para ajustes</td>
+        <td class="perm-no">—</td>
+        <td><span class="perm-cond">Se ativo no projeto</span></td>
+        <td><span class="perm-cond">Se não houver consultor</span></td>
+      </tr>
+      <tr>
+        <td>Reabrir relatório devolvido</td>
+        <td class="perm-yes">Sim</td>
+        <td class="perm-no">—</td>
+        <td class="perm-no">—</td>
+      </tr>
+      <tr>
+        <td>Preencher dados financeiros</td>
+        <td class="perm-yes">Sim (dentro do relatório)</td>
+        <td class="perm-no">—</td>
+        <td class="perm-yes">Sim (rascunho)</td>
+      </tr>
+      <tr>
+        <td>Visualizar dados financeiros</td>
+        <td class="perm-yes">Sim</td>
+        <td class="perm-yes">Sim</td>
+        <td class="perm-yes">Sim</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===================== 4. REGRAS DE NEGÓCIO ===================== -->
+<div class="section" id="s4">
+  <div class="section-header">
+    <span class="section-number">4</span>
+    <h2>Regras de Negócio Implementadas</h2>
+  </div>
+  <p>Todas as regras abaixo estão implementadas e verificadas diretamente no código-fonte do sistema.</p>
+
+  <div class="rule-item">
+    <div class="rule-num">1</div>
+    <div class="rule-text">
+      A <strong>Organização</strong> é quem cria e preenche o relatório. O Investidor também pode criar, mas a Organização é o perfil operacional principal.
+      <span class="rule-source">report.actions.ts</span>
+    </div>
+  </div>
+
+  <div class="rule-item">
+    <div class="rule-num">2</div>
+    <div class="rule-text">
+      O relatório nasce com status <strong>DRAFT (Rascunho)</strong> e pode ser editado livremente pela Organização ou pelo Investidor nesse estágio.
+      <span class="rule-source">reports.service.ts → saveDraft()</span>
+    </div>
+  </div>
+
+  <div class="rule-item">
+    <div class="rule-num">3</div>
+    <div class="rule-text">
+      A Organização pode editar relatórios em <strong>DRAFT e RETURNED</strong>. O Investidor pode editar apenas em <strong>DRAFT</strong>.
+      <span class="rule-source">reports.service.ts → saveDraft()</span>
+    </div>
+  </div>
+
+  <div class="rule-item">
+    <div class="rule-num">4</div>
+    <div class="rule-text">
+      Para enviar um relatório, é obrigatório ter <strong>pelo menos um comprovante de despesa</strong> (nota fiscal ou recibo) anexado. O sistema verifica tanto em tabela normalizada quanto em dados legados.
+      <span class="rule-source">reports.service.ts → submitReport()</span>
+    </div>
+  </div>
+
+  <div class="rule-item">
+    <div class="rule-num">5</div>
+    <div class="rule-text">
+      Apenas relatórios em <strong>DRAFT ou RETURNED</strong> podem ser enviados para análise. Relatórios já enviados, aprovados ou em outro estado são bloqueados.
+      <span class="rule-source">reports.service.ts → submitReport()</span>
+    </div>
+  </div>
+
+  <div class="rule-item">
+    <div class="rule-num">6</div>
+    <div class="rule-text">
+      Se o projeto possui um <strong>Consultor ativo</strong> (verificado na tabela <code>project_consultants</code> com <code>active = true</code>),
+      é exclusivamente o Consultor quem analisa e aprova/devolve. O Investidor fica impedido de tomar essa ação.
+      <span class="rule-source">reports.service.ts → reviewReport()</span>
+    </div>
+  </div>
+
+  <div class="rule-item">
+    <div class="rule-num">7</div>
+    <div class="rule-text">
+      Se o projeto <strong>não possui Consultor ativo</strong>, o Investidor assume diretamente a análise e aprovação. Consultores não vinculados ao projeto ficam impedidos.
+      <span class="rule-source">reports.service.ts → reviewReport()</span>
+    </div>
+  </div>
+
+  <div class="rule-item">
+    <div class="rule-num">8</div>
+    <div class="rule-text">
+      Apenas <strong>um analista por vez</strong> é responsável pela aprovação: ou o Consultor, ou o Investidor — nunca ambos simultaneamente. O sistema valida isso a cada ação.
+      <span class="rule-source">reports.service.ts → projectHasActiveConsultant()</span>
+    </div>
+  </div>
+
+  <div class="rule-item">
+    <div class="rule-num">9</div>
+    <div class="rule-text">
+      O Consultor deve ser <strong>o ativo no projeto específico</strong> para poder aprovar. Ter perfil de consultor não é suficiente — precisa estar vinculado e ativo naquele projeto.
+      <span class="rule-source">reports.service.ts → isActiveConsultantOnProject()</span>
+    </div>
+  </div>
+
+  <div class="rule-item">
+    <div class="rule-num">10</div>
+    <div class="rule-text">
+      Ao devolver, o analista inclui um <strong>comentário obrigatório</strong>. Ao aprovar, o comentário é opcional. Ambos geram um registro na tabela <code>report_reviews</code>.
+      <span class="rule-source">ReviewReportButtons.tsx</span>
+    </div>
+  </div>
+
+  <div class="rule-item">
+    <div class="rule-num">11</div>
+    <div class="rule-text">
+      Relatórios devolvidos ficam com status <strong>RETURNED</strong>. A Organização pode reabrir para edição e reenviar. O ciclo se repete sem limite.
+      <span class="rule-source">reports.service.ts → reopenToDraft()</span>
+    </div>
+  </div>
+
+  <div class="rule-item">
+    <div class="rule-num">12</div>
+    <div class="rule-text">
+      O relatório <strong>aprovado fica permanentemente travado</strong>. Nenhum perfil pode alterar, editar ou reenviar um relatório com status APPROVED.
+      <span class="rule-source">lib/status.ts → REPORT_FLOW</span>
+    </div>
+  </div>
+
+  <div class="rule-item">
+    <div class="rule-num">13</div>
+    <div class="rule-text">
+      Os dados financeiros são preenchidos <strong>dentro dos relatórios</strong> em tabelas normalizadas (<code>report_financial_items</code>, <code>report_receipts</code>, <code>report_reallocations</code>, <code>report_bank_statements</code>).
+      <span class="rule-source">report-financial.service.ts</span>
+    </div>
+  </div>
+
+  <div class="rule-item">
+    <div class="rule-num">14</div>
+    <div class="rule-text">
+      A aba Financeiro do projeto exibe uma <strong>visão consolidada automática</strong> que agrega itens, comprovantes e extratos de todos os relatórios do projeto.
+      <span class="rule-source">report-financial.service.ts → getProjectFinancialAggregation()</span>
+    </div>
+  </div>
+
+  <div class="rule-item">
+    <div class="rule-num">15</div>
+    <div class="rule-text">
+      O sistema mantém <strong>versionamento completo</strong>. Cada mudança de status gera uma nova versão na tabela <code>report_versions</code>, preservando o histórico completo do relatório.
+      <span class="rule-source">reports.service.ts → saveDraft(), submitReport()</span>
+    </div>
+  </div>
+
+  <div class="rule-item">
+    <div class="rule-num">16</div>
+    <div class="rule-text">
+      A resolução de perfil segue prioridade <strong>INVESTOR > CONSULTANT > ORG</strong>. Se um usuário tem múltiplos vínculos, o perfil de maior prioridade prevalece.
+      <span class="rule-source">lib/roles.ts → getPrimaryRole()</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 5. FLUXO VISUAL EM TEXTO ===================== -->
+<div class="section" id="s5">
+  <div class="section-header">
+    <span class="section-number">5</span>
+    <h2>Fluxo Visual em Texto</h2>
+  </div>
+  <div class="flow-text">
+
+    <div class="flow-step">
+      <span class="flow-arrow">01.</span>
+      <span>Organização <strong>cria</strong> um novo relatório no projeto
+        <span class="flow-label label-draft">Rascunho</span>
+      </span>
+    </div>
+
+    <div class="flow-step flow-indent"><span class="flow-arrow">&darr;</span></div>
+
+    <div class="flow-step">
+      <span class="flow-arrow">02.</span>
+      <span>Organização <strong>preenche</strong> o relatório:</span>
+    </div>
+    <div class="flow-step flow-indent">
+      <span class="flow-arrow">&bull;</span>
+      <span>Dados gerais de execução do projeto</span>
+    </div>
+    <div class="flow-step flow-indent">
+      <span class="flow-arrow">&bull;</span>
+      <span>Itens financeiros — orçamento planejado, gastos, remanejamentos</span>
+    </div>
+    <div class="flow-step flow-indent">
+      <span class="flow-arrow">&bull;</span>
+      <span>Comprovantes de despesas — notas fiscais e recibos (obrigatório: mínimo 1)</span>
+    </div>
+    <div class="flow-step flow-indent">
+      <span class="flow-arrow">&bull;</span>
+      <span>Extratos bancários</span>
+    </div>
+
+    <div class="flow-step flow-indent"><span class="flow-arrow">&darr;</span></div>
+
+    <div class="flow-step">
+      <span class="flow-arrow">03.</span>
+      <span>Organização <strong>envia</strong> o relatório para análise
+        <span class="flow-label label-submitted">Enviado</span>
+      </span>
+    </div>
+    <div class="flow-step flow-indent" style="font-size:12px; color: var(--text-secondary);">
+      <span style="visibility:hidden">&bull;&nbsp;</span>
+      <span>Sistema valida: comprovante obrigatório + status DRAFT ou RETURNED</span>
+    </div>
+
+    <div class="flow-step flow-indent"><span class="flow-arrow">&darr;</span></div>
+
+    <div class="flow-step">
+      <span class="flow-arrow">04.</span>
+      <span class="flow-decision">O projeto possui Consultor ativo vinculado?</span>
+    </div>
+
+    <div class="flow-step flow-indent">
+      <span class="flow-yes">SIM &rarr;</span>
+      <span>&nbsp;O <strong>Consultor</strong> ativo do projeto recebe para análise</span>
+    </div>
+    <div class="flow-step flow-indent">
+      <span class="flow-no">NÃO &rarr;</span>
+      <span>&nbsp;O <strong>Investidor</strong> recebe diretamente para análise</span>
+    </div>
+
+    <div class="flow-step flow-indent"><span class="flow-arrow">&darr;</span></div>
+
+    <div class="flow-step">
+      <span class="flow-arrow">05.</span>
+      <span class="flow-decision">Decisão do analista responsável:</span>
+    </div>
+
+    <div class="flow-step flow-indent">
+      <span class="flow-yes">APROVAR &rarr;</span>
+      <span>&nbsp;Relatório finalizado e travado
+        <span class="flow-label label-approved">Aprovado</span>
+      </span>
+    </div>
+    <div class="flow-step flow-indent">
+      <span class="flow-no">DEVOLVER &rarr;</span>
+      <span>&nbsp;Relatório retorna para a Organização com comentário
+        <span class="flow-label label-returned">Devolvido</span>
+      </span>
+    </div>
+
+    <div class="flow-step flow-indent"><span class="flow-arrow">&darr;</span></div>
+
+    <div class="flow-step">
+      <span class="flow-arrow">06.</span>
+      <span><em>Se devolvido:</em> Organização <strong>ajusta</strong> o relatório e <strong>reenvia</strong> &mdash; retorna ao passo 03</span>
+    </div>
+
+    <div class="flow-step flow-indent"><span class="flow-arrow">&darr;</span></div>
+
+    <div class="flow-step">
+      <span class="flow-arrow">07.</span>
+      <span><em>Se aprovado:</em> Dados financeiros <strong>consolidados automaticamente</strong> na aba Financeiro do projeto</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== 6. FLUXOGRAMA MERMAID ===================== -->
+<div class="section" id="s6">
+  <div class="section-header">
+    <span class="section-number">6</span>
+    <h2>Fluxograma do Sistema</h2>
+  </div>
+  <p>Representação visual completa do fluxo de aprovação de relatórios.</p>
+  <div class="mermaid-wrapper">
+    <pre class="mermaid">
+flowchart TD
+    START(["Início"]) --> CREATE["Organização cria relatório"]
+    CREATE --> FILL["Organização preenche o relatório\nDados gerais + Financeiro + Comprovantes"]
+    FILL --> DRAFT[("Status: RASCUNHO")]
+
+    DRAFT --> SUBMIT{"Organização envia\npara análise"}
+    SUBMIT --> |"Valida: mín. 1 comprovante"| SUBMITTED[("Status: ENVIADO")]
+
+    SUBMITTED --> CHECK{"Existe Consultor\nativo no projeto?"}
+
+    CHECK -- Sim --> CONSULTANT_REVIEW["Consultor analisa o relatório"]
+    CHECK -- Não --> INVESTOR_REVIEW["Investidor analisa o relatório"]
+
+    CONSULTANT_REVIEW --> CONSULTANT_DECISION{"Decisão do Consultor"}
+    INVESTOR_REVIEW --> INVESTOR_DECISION{"Decisão do Investidor"}
+
+    CONSULTANT_DECISION -- Aprovar --> APPROVED[("Status: APROVADO")]
+    CONSULTANT_DECISION -- Devolver --> RETURNED[("Status: DEVOLVIDO")]
+
+    INVESTOR_DECISION -- Aprovar --> APPROVED
+    INVESTOR_DECISION -- Devolver --> RETURNED
+
+    RETURNED --> |"Organização recebe\ncomentário do analista"| ADJUST["Organização ajusta\no relatório"]
+    ADJUST --> DRAFT
+
+    APPROVED --> CONSOLIDATE["Dados financeiros\nconsolidados no projeto"]
+    CONSOLIDATE --> END_(["Fluxo finalizado"])
+
+    style START fill:#6366f1,stroke:#4f46e5,color:#fff
+    style END_ fill:#6366f1,stroke:#4f46e5,color:#fff
+    style DRAFT fill:#fbbf24,stroke:#f59e0b,color:#000
+    style SUBMITTED fill:#60a5fa,stroke:#3b82f6,color:#000
+    style APPROVED fill:#34d399,stroke:#10b981,color:#000
+    style RETURNED fill:#f87171,stroke:#ef4444,color:#fff
+    style CREATE fill:#e0e7ff,stroke:#6366f1,color:#000
+    style FILL fill:#e0e7ff,stroke:#6366f1,color:#000
+    style ADJUST fill:#fef3c7,stroke:#f59e0b,color:#000
+    style CONSULTANT_REVIEW fill:#ddd6fe,stroke:#8b5cf6,color:#000
+    style INVESTOR_REVIEW fill:#cffafe,stroke:#06b6d4,color:#000
+    style CONSOLIDATE fill:#d1fae5,stroke:#10b981,color:#000
+    </pre>
+  </div>
+</div>
+
+<!-- ===================== 7. VERSÃO PARA BRUNO ===================== -->
+<div class="section" id="s7">
+  <div class="section-header">
+    <span class="section-number">7</span>
+    <h2>Versão para Apresentação ao Cliente</h2>
+  </div>
+  <div class="bruno-card">
+    <p><strong>Bruno,</strong></p>
+    <p>
+      Segue o resumo do fluxo final do Transparência Social, conforme definido e implementado no sistema.
+    </p>
+    <p>
+      O sistema funciona da seguinte forma: a <strong>Organização</strong> cria o relatório do projeto, preenche
+      todos os dados — incluindo a parte financeira (itens de orçamento, gastos, remanejamentos, comprovantes
+      de despesas e extratos bancários) — e envia para análise. Para enviar, é obrigatório ter ao menos
+      um comprovante de despesa anexado.
+    </p>
+    <p>
+      A análise funciona de forma dinâmica, dependendo da configuração de cada projeto. Se existe um
+      <strong>Consultor</strong> vinculado e ativo no projeto, é ele quem analisa e decide: aprova ou
+      devolve para ajustes. Se não existe Consultor, o <strong>Investidor</strong> assume esse papel e
+      faz a aprovação diretamente. Nunca os dois atuam ao mesmo tempo no mesmo projeto — o sistema
+      garante que apenas um responsável por vez toma a decisão.
+    </p>
+    <p>
+      Se o relatório for devolvido, a Organização recebe de volta com os comentários do analista indicando
+      o que precisa ser corrigido. Ela faz os ajustes e reenvia. Esse ciclo se repete quantas vezes for
+      necessário até a aprovação.
+    </p>
+    <p>
+      Uma vez aprovado, o relatório fica travado permanentemente e todos os dados financeiros são
+      consolidados automaticamente na aba Financeiro do projeto — dando visibilidade total e atualizada
+      sobre a aplicação dos recursos.
+    </p>
+    <p>
+      Resumindo as permissões: a Organização é operacional (cria, preenche, envia, corrige após devolução).
+      O Consultor, quando presente, é o analista exclusivo. O Investidor aprova diretamente apenas quando
+      não há Consultor. Todos os perfis têm visibilidade sobre os dados financeiros consolidados.
+    </p>
+  </div>
+</div>
+
+<!-- ===================== 8. APÊNDICE TÉCNICO ===================== -->
+<div class="section" id="s8">
+  <div class="section-header">
+    <span class="section-number">8</span>
+    <h2>Apêndice Técnico</h2>
+  </div>
+  <p>Referência dos arquivos-chave do sistema e a lógica de negócio implementada em cada um. Baseado diretamente no código-fonte.</p>
+
+  <!-- lib/roles.ts -->
+  <div class="tech-file">
+    <div class="tech-file-header">
+      <span class="file-icon">TS</span>
+      lib/roles.ts
+    </div>
+    <div class="tech-file-body">
+      <p><strong>Propósito:</strong> Define os 3 perfis do sistema e a resolução de prioridade.</p>
+      <div class="tech-check"><span class="tech-fn">getPrimaryRole(ctx)</span> — resolve o perfil principal: INVESTOR > CONSULTANT > ORG</div>
+      <div class="tech-check"><span class="tech-fn">getRoleLabel(role)</span> — retorna label amigável ("Empresa / Financiador", "Consultor", "Organização Social")</div>
+      <div class="tech-check">Tipo <span class="tech-fn">PrimaryRole</span> = "INVESTOR" | "CONSULTANT" | "ORG"</div>
+    </div>
+  </div>
+
+  <!-- lib/status.ts -->
+  <div class="tech-file">
+    <div class="tech-file-header">
+      <span class="file-icon">TS</span>
+      lib/status.ts
+    </div>
+    <div class="tech-file-body">
+      <p><strong>Propósito:</strong> Define os status possíveis e as transições permitidas dos relatórios.</p>
+      <div class="tech-check">Status: DRAFT, SUBMITTED, RETURNED, APPROVED</div>
+      <div class="tech-check">Transições: DRAFT→SUBMITTED, SUBMITTED→APPROVED|RETURNED, RETURNED→SUBMITTED, APPROVED→(nenhuma)</div>
+      <div class="tech-check">Labels PT-BR: Rascunho, Enviado, Devolvido, Aprovado</div>
+    </div>
+  </div>
+
+  <!-- services/reports.service.ts -->
+  <div class="tech-file">
+    <div class="tech-file-header">
+      <span class="file-icon">TS</span>
+      services/reports.service.ts
+    </div>
+    <div class="tech-file-body">
+      <p><strong>Propósito:</strong> Arquivo central de toda a lógica de negócio dos relatórios. Controla permissões, validações e transições de status.</p>
+
+      <div class="tech-check"><span class="tech-fn">projectHasActiveConsultant(projectId)</span> — consulta <code>project_consultants</code> onde <code>active = true</code>. Retorna boolean. Determina quem aprova.</div>
+
+      <div class="tech-check"><span class="tech-fn">isActiveConsultantOnProject(projectId, userId)</span> — verifica se o usuário específico é o consultor ativo do projeto.</div>
+
+      <div class="tech-check"><span class="tech-fn">saveDraft(reportId, dataJson, userId)</span> — Permite edição. Validações: (1) usuário é ORG ou INVESTOR; (2) ORG pode editar DRAFT e RETURNED; (3) INVESTOR pode editar apenas DRAFT. Cria nova versão ou atualiza existente.</div>
+
+      <div class="tech-check"><span class="tech-fn">submitReport(reportId, userId)</span> — Envia para análise. Validações: (1) usuário é ORG ou INVESTOR; (2) status é DRAFT ou RETURNED; (3) pelo menos 1 comprovante existe (verifica tabela normalizada + JSON legado). Cria nova versão SUBMITTED e atualiza <code>submitted_at</code>.</div>
+
+      <div class="tech-check"><span class="tech-fn">reviewReport(reportId, comment, userId, decision)</span> — Função central de aprovação/devolução. Validações: (1) usuário é INVESTOR ou CONSULTANT; (2) se <code>projectHasActiveConsultant</code> → só CONSULTANT pode agir, e deve ser o ativo no projeto; (3) se não há consultor → só INVESTOR pode agir. Insere registro em <code>report_reviews</code> e atualiza status.</div>
+
+      <div class="tech-check"><span class="tech-fn">reopenToDraft(reportId, userId)</span> — Reabre para edição. ORG pode reabrir RETURNED. INVESTOR pode reabrir qualquer status exceto DRAFT.</div>
+
+      <div class="tech-check"><span class="tech-fn">approveReport()</span> e <span class="tech-fn">returnReport()</span> — wrappers que chamam <code>reviewReport()</code> com a decisão correspondente.</div>
+
+      <div class="tech-check"><span class="tech-fn">getLatestReview(reportId)</span> — busca a revisão mais recente para exibir comentário do analista.</div>
+    </div>
+  </div>
+
+  <!-- services/report-financial.service.ts -->
+  <div class="tech-file">
+    <div class="tech-file-header">
+      <span class="file-icon">TS</span>
+      services/report-financial.service.ts
+    </div>
+    <div class="tech-file-body">
+      <p><strong>Propósito:</strong> CRUD das seções financeiras do relatório (seções 12-15) e consolidação no nível do projeto.</p>
+      <div class="tech-check"><strong>Tabelas:</strong> <code>report_financial_items</code>, <code>report_financial_summary</code>, <code>report_reallocations</code>, <code>report_receipts</code>, <code>report_bank_statements</code></div>
+      <div class="tech-check"><span class="tech-fn">listFinancialItems()</span>, <span class="tech-fn">upsertFinancialItem()</span>, <span class="tech-fn">deleteFinancialItem()</span> — CRUD itens financeiros (seção 12)</div>
+      <div class="tech-check"><span class="tech-fn">getFinancialSummary()</span>, <span class="tech-fn">upsertFinancialSummary()</span> — resumo financeiro por relatório</div>
+      <div class="tech-check"><span class="tech-fn">listReallocations()</span>, <span class="tech-fn">upsertReallocation()</span>, <span class="tech-fn">deleteReallocation()</span> — remanejamentos (seção 13)</div>
+      <div class="tech-check"><span class="tech-fn">listReceipts()</span>, <span class="tech-fn">upsertReceipt()</span>, <span class="tech-fn">deleteReceipt()</span> — comprovantes com upload (seção 14)</div>
+      <div class="tech-check"><span class="tech-fn">listBankStatements()</span>, <span class="tech-fn">createBankStatement()</span>, <span class="tech-fn">deleteBankStatement()</span> — extratos (seção 15)</div>
+      <div class="tech-check"><span class="tech-fn">getProjectFinancialAggregation(projectId)</span> — <strong>Consolidação.</strong> Busca todos os relatórios do projeto e agrega em paralelo: itens financeiros, comprovantes e extratos. Retorna totais: <code>total_budget_planned</code>, <code>total_spent</code>, <code>total_receipts_value</code>, <code>total_bank_statements</code>, <code>total_items</code>.</div>
+    </div>
+  </div>
+
+  <!-- app/actions/report.actions.ts -->
+  <div class="tech-file">
+    <div class="tech-file-header">
+      <span class="file-icon">TS</span>
+      app/actions/report.actions.ts
+    </div>
+    <div class="tech-file-body">
+      <p><strong>Propósito:</strong> Server actions (Next.js) que conectam a UI às funções do service.</p>
+      <div class="tech-check"><span class="tech-fn">createReportAction()</span> — verifica se role é ORG ou INVESTOR antes de criar. Busca template ativo para o tipo do projeto.</div>
+      <div class="tech-check"><span class="tech-fn">submitReportAction()</span> → chama <code>submitReport()</code></div>
+      <div class="tech-check"><span class="tech-fn">approveReportAction()</span> → chama <code>approveReport()</code></div>
+      <div class="tech-check"><span class="tech-fn">returnReportAction()</span> → chama <code>returnReport()</code></div>
+      <div class="tech-check"><span class="tech-fn">reopenReportToDraftAction()</span> → chama <code>reopenToDraft()</code></div>
+    </div>
+  </div>
+
+  <!-- app/dashboard/reports/[id]/page.tsx -->
+  <div class="tech-file">
+    <div class="tech-file-header">
+      <span class="file-icon">TSX</span>
+      app/dashboard/reports/[id]/page.tsx
+    </div>
+    <div class="tech-file-body">
+      <p><strong>Propósito:</strong> Página de detalhe do relatório. Calcula as permissões e renderiza botões condicionais.</p>
+      <div class="tech-check"><strong>canEdit</strong> = (ORG e status DRAFT|RETURNED) ou (INVESTOR e status DRAFT)</div>
+      <div class="tech-check"><strong>canSubmit</strong> = (ORG e status DRAFT|RETURNED) ou (INVESTOR e status DRAFT)</div>
+      <div class="tech-check"><strong>canReopen</strong> = ORG e status RETURNED</div>
+      <div class="tech-check"><strong>canReview</strong> = status SUBMITTED e [(hasConsultant e isConsultant) ou (!hasConsultant e isInvestor)]</div>
+      <div class="tech-check">Chama <span class="tech-fn">projectHasActiveConsultant()</span> para determinar quem pode avaliar</div>
+    </div>
+  </div>
+
+  <!-- components/dashboard/ReviewReportButtons.tsx -->
+  <div class="tech-file">
+    <div class="tech-file-header">
+      <span class="file-icon">TSX</span>
+      components/dashboard/ReviewReportButtons.tsx
+    </div>
+    <div class="tech-file-body">
+      <p><strong>Propósito:</strong> Componente de botões de avaliação (Aprovar / Devolver p/ ajustes).</p>
+      <div class="tech-check">Dois botões: "Aprovar" (verde) e "Devolver p/ ajustes" (âmbar)</div>
+      <div class="tech-check">Modal com campo de comentário. Ao devolver, comentário é obrigatório. Ao aprovar, é opcional.</div>
+      <div class="tech-check">Chama <span class="tech-fn">approveReportAction()</span> ou <span class="tech-fn">returnReportAction()</span></div>
+      <div class="tech-check">Recebe prop <code>roleLabel</code> para exibir "consultor" ou "financiador" no texto do modal</div>
+    </div>
+  </div>
+
+  <!-- components/projects/ProjectFinancial.tsx -->
+  <div class="tech-file">
+    <div class="tech-file-header">
+      <span class="file-icon">TSX</span>
+      components/projects/ProjectFinancial.tsx
+    </div>
+    <div class="tech-file-body">
+      <p><strong>Propósito:</strong> Componente da aba Financeiro do projeto. Exibe visão consolidada.</p>
+      <div class="tech-check">Recebe <code>projectId</code>, <code>role</code>, <code>financialData</code> (retorno de <span class="tech-fn">getProjectFinancialAggregation()</span>)</div>
+      <div class="tech-check">Exibe KPIs: total de itens, orçamento planejado, gastos realizados, quantidade de comprovantes</div>
+      <div class="tech-check">Tabela consolidada de itens financeiros de todos os relatórios</div>
+      <div class="tech-check">Tabela consolidada de comprovantes</div>
+      <div class="tech-check">Lista de extratos bancários</div>
+      <div class="tech-check">Compatibilidade com dados legados: exibe dados JSON antigos quando tabelas normalizadas estão vazias</div>
+    </div>
+  </div>
+
+</div><!-- /section 8 -->
+
+</div><!-- /container -->
+
+<div class="footer">
+  Transparência Social &bull; Documento de Alinhamento de Produto &bull; v1.0 &bull; Abril 2026
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#e0e7ff',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#6366f1',
+      lineColor: '#94a3b8',
+      secondaryColor: '#f5f3ff',
+      tertiaryColor: '#ecfeff',
+      fontSize: '14px'
+    }
+  });
+</script>
+</body>
+</html>

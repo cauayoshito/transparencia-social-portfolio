@@ -1,0 +1,40 @@
+flowchart TD
+    START(["Início"]) --> CREATE["Organização cria relatório"]
+    CREATE --> FILL["Organização preenche o relatório\nDados gerais + Financeiro + Comprovantes"]
+    FILL --> DRAFT[("Status: RASCUNHO")]
+
+    DRAFT --> SUBMIT{"Organização envia\npara análise"}
+    SUBMIT --> |"Valida: mín. 1 comprovante"| SUBMITTED[("Status: ENVIADO")]
+
+    SUBMITTED --> CHECK{"Existe Consultor\nativo no projeto?"}
+
+    CHECK -- Sim --> CONSULTANT_REVIEW["Consultor analisa o relatório"]
+    CHECK -- Não --> INVESTOR_REVIEW["Investidor analisa o relatório"]
+
+    CONSULTANT_REVIEW --> CONSULTANT_DECISION{"Decisão do Consultor"}
+    INVESTOR_REVIEW --> INVESTOR_DECISION{"Decisão do Investidor"}
+
+    CONSULTANT_DECISION -- Aprovar --> APPROVED[("Status: APROVADO")]
+    CONSULTANT_DECISION -- Devolver --> RETURNED[("Status: DEVOLVIDO")]
+
+    INVESTOR_DECISION -- Aprovar --> APPROVED
+    INVESTOR_DECISION -- Devolver --> RETURNED
+
+    RETURNED --> |"Organização recebe\ncomentário do analista"| ADJUST["Organização ajusta\no relatório"]
+    ADJUST --> DRAFT
+
+    APPROVED --> CONSOLIDATE["Dados financeiros\nconsolidados no projeto"]
+    CONSOLIDATE --> END_(["Fluxo finalizado"])
+
+    style START fill:#6366f1,stroke:#4f46e5,color:#fff
+    style END_ fill:#6366f1,stroke:#4f46e5,color:#fff
+    style DRAFT fill:#fbbf24,stroke:#f59e0b,color:#000
+    style SUBMITTED fill:#60a5fa,stroke:#3b82f6,color:#000
+    style APPROVED fill:#34d399,stroke:#10b981,color:#000
+    style RETURNED fill:#f87171,stroke:#ef4444,color:#fff
+    style CREATE fill:#e0e7ff,stroke:#6366f1,color:#000
+    style FILL fill:#e0e7ff,stroke:#6366f1,color:#000
+    style ADJUST fill:#fef3c7,stroke:#f59e0b,color:#000
+    style CONSULTANT_REVIEW fill:#ddd6fe,stroke:#8b5cf6,color:#000
+    style INVESTOR_REVIEW fill:#cffafe,stroke:#06b6d4,color:#000
+    style CONSOLIDATE fill:#d1fae5,stroke:#10b981,color:#000
