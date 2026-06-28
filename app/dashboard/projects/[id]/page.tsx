@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { changeProjectStatusAction } from "@/app/actions/project-status.actions";
+import { autosaveProjectPlanAction } from "@/app/actions/project-plan.actions";
 
 import { isConsultant } from "@/lib/permissions";
 import { getPrimaryRole } from "@/lib/roles";
@@ -434,7 +435,7 @@ export default async function DashboardProjectDetailPage({
         </div>
       </nav>
 
-      <UnsavedChangesGuard>
+      <UnsavedChangesGuard autosaveAction={autosaveProjectPlanAction}>
         <div className="min-w-0">
           {tab === "overview" && (
             <div className="space-y-6">

@@ -129,7 +129,11 @@ export default async function ProjectPlan({
           </span>
         </div>
 
-        <form action={saveProjectPlanAction} className="space-y-4">
+        <form
+          action={saveProjectPlanAction}
+          data-autosave="plan"
+          className="space-y-4"
+        >
           <input type="hidden" name="project_id" value={project.id} />
 
           <div>
