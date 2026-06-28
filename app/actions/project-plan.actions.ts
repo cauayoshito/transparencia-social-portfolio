@@ -28,6 +28,8 @@ export async function saveProjectPlanAction(formData: FormData) {
 
   const projectId = asString(formData.get("project_id")).trim();
   const objective = asString(formData.get("objective")).trim();
+  const objectiveSpecific = asString(formData.get("objective_specific")).trim();
+  const methodology = asString(formData.get("methodology")).trim();
 
   if (!projectId) {
     redirect(
@@ -49,7 +51,12 @@ export async function saveProjectPlanAction(formData: FormData) {
     });
   }
 
-  const planData = buildProjectPlanData(project?.plan_data, objective);
+  const planData = buildProjectPlanData(
+    project?.plan_data,
+    objective,
+    objectiveSpecific,
+    methodology
+  );
 
   const { error: updateError } = await supabase
     .from("projects")

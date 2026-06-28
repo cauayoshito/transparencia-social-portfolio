@@ -58,13 +58,6 @@ function goalStatusLabel(value: string | null | undefined) {
   );
 }
 
-function milestoneStatusLabel(value: string | null | undefined) {
-  return (
-    MILESTONE_STATUS_OPTIONS.find((option) => option.value === value)?.label ??
-    "Planejado"
-  );
-}
-
 function formatDate(value: string | null | undefined) {
   if (!value) return null;
 
@@ -81,33 +74,6 @@ function formatDate(value: string | null | undefined) {
 
 function formatDueDate(value: string | null | undefined) {
   return formatDate(value) ?? "Prazo nao definido";
-}
-
-function formatMilestonePeriod(
-  startsAt: string | null | undefined,
-  endsAt: string | null | undefined
-) {
-  const startsLabel = formatDate(startsAt);
-  const endsLabel = formatDate(endsAt);
-
-  if (startsLabel && endsLabel) return `De ${startsLabel} ate ${endsLabel}`;
-  if (startsLabel) return `Inicio em ${startsLabel}`;
-  if (endsLabel) return `Fim em ${endsLabel}`;
-
-  return "Periodo nao definido";
-}
-
-function getNextSortOrder(
-  items: Array<{ sort_order: number | null | undefined }>
-) {
-  if (items.length === 0) return 0;
-
-  return (
-    items.reduce(
-      (highest, item) => Math.max(highest, Number(item.sort_order ?? 0)),
-      -1
-    ) + 1
-  );
 }
 
 export default async function ProjectPlan({
@@ -143,8 +109,6 @@ export default async function ProjectPlan({
       : null;
 
   const goalTitleById = new Map(goals.map((goal) => [goal.id, goal.title]));
-  const suggestedGoalSortOrder = getNextSortOrder(goals);
-  const suggestedMilestoneSortOrder = getNextSortOrder(milestones);
 
   return (
     <section className="space-y-4 sm:space-y-6">
@@ -181,6 +145,36 @@ export default async function ProjectPlan({
             <p className="mt-2 text-xs text-slate-500">
               Use este campo para registrar a direcao central do projeto nesta
               fase.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-900">
+              Objetivos especificos
+            </label>
+            <textarea
+              name="objective_specific"
+              defaultValue={plan.objective_specific}
+              className="min-h-[140px] w-full resize-y rounded-lg border border-slate-200 bg-white p-3 text-sm outline-none focus:border-slate-300"
+              placeholder="Liste os objetivos especificos que detalham o objetivo geral."
+            />
+            <p className="mt-2 text-xs text-slate-500">
+              Obrigatorio para enviar o projeto para analise.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-900">
+              Metodologia
+            </label>
+            <textarea
+              name="methodology"
+              defaultValue={plan.methodology}
+              className="min-h-[140px] w-full resize-y rounded-lg border border-slate-200 bg-white p-3 text-sm outline-none focus:border-slate-300"
+              placeholder="Descreva como o projeto sera executado: abordagem, etapas e metodos."
+            />
+            <p className="mt-2 text-xs text-slate-500">
+              Obrigatorio para enviar o projeto para analise.
             </p>
           </div>
 
@@ -287,20 +281,6 @@ export default async function ProjectPlan({
                     name="target_value"
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-300"
                     placeholder="Ex: 500 participantes"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-900">
-                    Ordenacao
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    name="sort_order"
-                    defaultValue={suggestedGoalSortOrder}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-300"
                   />
                 </div>
 
@@ -440,19 +420,11 @@ export default async function ProjectPlan({
                           />
                         </div>
 
-                        <div>
-                          <label className="mb-2 block text-sm font-medium text-slate-900">
-                            Ordenacao
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="1"
-                            name="sort_order"
-                            defaultValue={goal.sort_order}
-                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-300"
-                          />
-                        </div>
+                        <input
+                          type="hidden"
+                          name="sort_order"
+                          value={goal.sort_order ?? 0}
+                        />
 
                         <div className="sm:col-span-2">
                           <label className="mb-2 block text-sm font-medium text-slate-900">
@@ -610,20 +582,6 @@ export default async function ProjectPlan({
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-900">
-                    Ordenacao
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    name="sort_order"
-                    defaultValue={suggestedMilestoneSortOrder}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-300"
-                  />
-                </div>
-
                 <div className="sm:col-span-2">
                   <label className="mb-2 block text-sm font-medium text-slate-900">
                     Descricao
@@ -677,27 +635,22 @@ export default async function ProjectPlan({
                       key={milestone.id}
                       className="rounded-xl border border-slate-200 bg-white p-4"
                     >
-                      <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="mb-4 border-b border-slate-100 pb-4">
                         <div className="min-w-0 space-y-1">
                           <h5 className="break-words text-sm font-semibold text-slate-900">
                             {milestone.title}
                           </h5>
                           <p className="text-sm text-slate-500">
-                            {formatMilestonePeriod(
-                              milestone.starts_at,
-                              milestone.ends_at
-                            )}
-                          </p>
-                          <p className="text-sm text-slate-500">
                             {linkedGoalTitle
                               ? `Meta vinculada: ${linkedGoalTitle}`
                               : "Sem meta vinculada"}
                           </p>
+                          {milestone.description ? (
+                            <p className="text-sm text-slate-600">
+                              {milestone.description}
+                            </p>
+                          ) : null}
                         </div>
-
-                        <span className="inline-flex w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-                          {milestoneStatusLabel(milestone.status)}
-                        </span>
                       </div>
 
                       <form
@@ -787,19 +740,11 @@ export default async function ProjectPlan({
                             />
                           </div>
 
-                          <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-900">
-                              Ordenacao
-                            </label>
-                            <input
-                              type="number"
-                              min="0"
-                              step="1"
-                              name="sort_order"
-                              defaultValue={milestone.sort_order}
-                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-300"
-                            />
-                          </div>
+                          <input
+                            type="hidden"
+                            name="sort_order"
+                            value={milestone.sort_order ?? 0}
+                          />
 
                           <div className="sm:col-span-2">
                             <label className="mb-2 block text-sm font-medium text-slate-900">
