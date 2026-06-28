@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/services/auth.service";
 
 export async function debugAuthContext(orgId: string) {
-  const supabase = createClient();
+  const supabase = createClient() as any;
 
   const appUser = await requireUser();
   const {

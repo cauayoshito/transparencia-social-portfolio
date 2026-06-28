@@ -29,7 +29,7 @@ export type OrganizationQuestionnaire = {
 };
 
 export async function getQuestionnaireByOrgId(orgId: string) {
-  const supabase = createClient();
+  const supabase = createClient() as any;
   const { data, error } = await supabase
     .from("organization_questionnaire")
     .select("*")
@@ -44,7 +44,7 @@ export async function upsertQuestionnaire(
   orgId: string,
   patch: Partial<OrganizationQuestionnaire>
 ) {
-  const supabase = createClient();
+  const supabase = createClient() as any;
   const {
     data: { user },
   } = await supabase.auth.getUser();

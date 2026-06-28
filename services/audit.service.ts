@@ -42,7 +42,7 @@ export async function logAction(
     return onFailure(`Falha ao registrar auditoria: actorUserId invalido (${normalizedActorUserId}).`);
   }
 
-  const supabase = createClient();
+  const supabase = createClient() as any;
   const { error } = await supabase.from("audit_logs").insert({
     action: normalizedAction,
     entity_type: normalizedEntityType,
