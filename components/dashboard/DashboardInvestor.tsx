@@ -38,9 +38,6 @@ export default function DashboardInvestor({
   const relatoriosSubmetidos = relatorios.filter(
     (r) => String(r.status ?? "").toUpperCase() === "SUBMITTED"
   ).length;
-  const relatoriosRascunho = relatorios.filter(
-    (r) => String(r.status ?? "").toUpperCase() === "DRAFT"
-  ).length;
 
   // ── Projetos ──
   const totalProjetos = projetos.length;
@@ -100,12 +97,12 @@ export default function DashboardInvestor({
         </div>
       </section>
 
-      {/* ── KPIs — Linha 1: Relatórios ── */}
+      {/* ── KPIs — Relatórios ── */}
       <section>
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
           Relatórios
         </p>
-        <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-3">
           <StatCard
             title="Recebidos"
             value={totalRelatorios}
@@ -127,12 +124,28 @@ export default function DashboardInvestor({
             tone="orange"
             tag="aguardando"
           />
+        </div>
+      </section>
+
+      {/* ── KPIs — Projetos ── */}
+      <section>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          Projetos
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2">
           <StatCard
             title="Projetos ativos"
             value={totalProjetos}
             icon={<span>🗂️</span>}
             tone="blue"
-            tag={`${projetosAprovados} aprovados`}
+            tag="na carteira"
+          />
+          <StatCard
+            title="Aprovados"
+            value={projetosAprovados}
+            icon={<span>✅</span>}
+            tone="green"
+            tag={`${pct(projetosAprovados, totalProjetos)}%`}
           />
         </div>
       </section>
@@ -236,12 +249,6 @@ export default function DashboardInvestor({
                   width: `${pct(relatoriosPendentes, totalRelatorios)}%`,
                 }}
               />
-              <div
-                className="bg-slate-300 transition-all"
-                style={{
-                  width: `${pct(relatoriosRascunho, totalRelatorios)}%`,
-                }}
-              />
             </>
           )}
         </div>
@@ -253,10 +260,6 @@ export default function DashboardInvestor({
           <span className="flex items-center gap-1.5">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-amber-400" />
             Pendentes ({relatoriosPendentes})
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-slate-300" />
-            Rascunho ({relatoriosRascunho})
           </span>
         </div>
       </section>
