@@ -8,6 +8,7 @@ import { readAndValidateProjectId, readRequiredString } from "@/lib/validation/i
 import { requireUser } from "@/services/auth.service";
 import { getUserContext } from "@/services/membership.service";
 import { getPrimaryRole } from "@/lib/roles";
+import { normalizeProjectPlanData } from "@/lib/project-plan";
 
 function isProjectStatus(value: string): value is ProjectStatus {
   return (PROJECT_STATUS as readonly string[]).includes(value);
@@ -79,8 +80,30 @@ export async function changeProjectStatusAction(formData: FormData) {
     });
   }
 
-  const reason = getReason(nextStatusRaw, formData);
   const supabase = createClient() as any;
+
+  // Envio do projeto exige Objetivos Específicos e Metodologia no Plano.
+  if (nextStatusRaw === "ENVIADO") {
+    const { data: projectRow } = await supabase
+      .from("projects")
+      .select("plan_data")
+      .eq("id", projectId)
+      .single();
+
+    const plan = normalizeProjectPlanData(projectRow?.plan_data);
+    const missing: string[] = [];
+
+    if (!plan.objective_specific.trim()) missing.push("Objetivos Específicos");
+    if (!plan.methodology.trim()) missing.push("Metodologia");
+
+    if (missing.length > 0) {
+      redirectWithMessage(projectId, {
+        error: `Preencha ${missing.join(" e ")} no Plano antes de enviar o projeto para análise.`,
+      });
+    }
+  }
+
+  const reason = getReason(nextStatusRaw, formData);
 
   const { error } = await supabase.rpc("phi_set_project_status", {
     p_project_id: projectId,

@@ -19,8 +19,6 @@ export default function DashboardConsultor({
   relatorios,
 }: Props) {
   // ── KPIs ──
-  const totalProjetos = projetos.length;
-
   const totalRelatorios = relatorios.length;
   const aguardandoRevisao = relatorios.filter(
     (r) => String(r.status ?? "").toUpperCase() === "SUBMITTED"
@@ -34,6 +32,23 @@ export default function DashboardConsultor({
   const filaRevisao = relatorios
     .filter((r) => String(r.status ?? "").toUpperCase() === "SUBMITTED")
     .slice(0, 6);
+
+  // ── Projetos para revisar — projetos com relatórios SUBMITTED ──
+  const submittedCountByProject = relatorios.reduce(
+    (acc: Record<string, number>, r: any) => {
+      if (
+        String(r.status ?? "").toUpperCase() === "SUBMITTED" &&
+        r.project_id
+      ) {
+        acc[r.project_id] = (acc[r.project_id] ?? 0) + 1;
+      }
+      return acc;
+    },
+    {}
+  );
+  const projetosParaRevisar = projetos.filter(
+    (p: any) => submittedCountByProject[p.id] > 0
+  );
 
   // ── Projetos sob gestão ──
   const projetosTop = projetos.slice(0, 5);
@@ -61,15 +76,13 @@ export default function DashboardConsultor({
         </div>
       </section>
 
+      {/* ── Relatórios ── */}
+      <h2 className="-mb-2 text-base font-semibold text-slate-900">
+        Relatórios
+      </h2>
+
       {/* ── KPIs ── */}
-      <section className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Projetos sob gestão"
-          value={totalProjetos}
-          icon={<span>🗂️</span>}
-          tone="blue"
-          tag="ativos"
-        />
+      <section className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Aguardando revisão"
           value={aguardandoRevisao}
@@ -158,6 +171,53 @@ export default function DashboardConsultor({
           </ul>
         )}
       </section>
+
+      {/* ── Projetos ── */}
+      <h2 className="-mb-2 text-base font-semibold text-slate-900">Projetos</h2>
+
+      {/* ── Projetos para revisar — projetos com relatórios SUBMITTED ── */}
+      {projetosParaRevisar.length > 0 && (
+        <section className="overflow-hidden rounded-xl border border-amber-200 bg-white">
+          <div className="flex flex-col gap-2 border-b border-amber-200 bg-amber-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <h3 className="text-sm font-semibold text-amber-900">
+              Projetos para revisar
+            </h3>
+            <span className="text-xs font-medium text-amber-700">
+              {projetosParaRevisar.length} projeto
+              {projetosParaRevisar.length > 1 ? "s" : ""} com relatórios na fila
+            </span>
+          </div>
+
+          <ul className="divide-y divide-slate-200">
+            {projetosParaRevisar.map((p: any) => {
+              const label =
+                p.title ?? p.name ?? p.project_name ?? "Projeto sem título";
+              const count = submittedCountByProject[p.id] ?? 0;
+              return (
+                <li
+                  key={p.id}
+                  className="flex items-center justify-between gap-4 p-4 sm:px-6"
+                >
+                  <div className="min-w-0">
+                    <Link
+                      href={`/dashboard/projects/${p.id}?tab=overview`}
+                      className="block truncate text-sm font-semibold text-blue-600 hover:underline"
+                    >
+                      {label}
+                    </Link>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {count} relatório{count > 1 ? "s" : ""} aguardando revisão
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+                    {count} na fila
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {/* ── Projetos sob gestão ── */}
       <section className="overflow-hidden rounded-xl border bg-white">

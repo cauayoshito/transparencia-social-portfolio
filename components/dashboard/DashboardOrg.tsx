@@ -1,5 +1,8 @@
 import Link from "next/link";
 import StatCard from "@/components/dashboard/StatCard";
+import GoalsBreakdown, {
+  type GoalItem,
+} from "@/components/dashboard/GoalsBreakdown";
 import {
   formatarData,
   projectStatusLabel,
@@ -12,6 +15,7 @@ type Props = {
   projetos: any[];
   relatorios: any[];
   goalsSummary: { total: number; done: number };
+  goals?: GoalItem[];
   milestonesSummary: { total: number; done: number };
 };
 
@@ -20,6 +24,7 @@ export default function DashboardOrg({
   projetos,
   relatorios,
   goalsSummary,
+  goals = [],
   milestonesSummary,
 }: Props) {
   // ── KPIs ──
@@ -43,14 +48,22 @@ export default function DashboardOrg({
   // ── Execução & Metas ──
   const pctExecucao = pct(milestonesSummary.done, milestonesSummary.total);
   const pctMetas = pct(goalsSummary.done, goalsSummary.total);
+  const metasEmAndamento = goals.filter(
+    (g) => String(g.status ?? "").toUpperCase() === "IN_PROGRESS"
+  ).length;
 
-  // ── "O que fazer agora" — priorizado: devolvidos > rascunhos ──
-  const relatoriosParaCorrigir = relatorios
-    .filter((r) => String(r.status ?? "").toUpperCase() === "RETURNED")
-    .slice(0, 3);
-  const relatoriosParaEnviar = relatorios
-    .filter((r) => String(r.status ?? "").toUpperCase() === "DRAFT")
-    .slice(0, 3);
+  // ── "Próximo relatório" — relatórios que requerem ação, mais recentes primeiro ──
+  const relatoriosProximos = relatorios
+    .filter((r) => {
+      const s = String(r.status ?? "").toUpperCase();
+      return s === "RETURNED" || s === "DRAFT";
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.updated_at ?? b.created_at ?? 0).getTime() -
+        new Date(a.updated_at ?? a.created_at ?? 0).getTime()
+    )
+    .slice(0, 6);
 
   const projetosTop = projetos.slice(0, 5);
 
@@ -106,7 +119,7 @@ export default function DashboardOrg({
       )}
 
       {/* ── KPIs — Linha 1 ── */}
-      <section className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Projetos ativos"
           value={projetosAtivos}
@@ -127,13 +140,6 @@ export default function DashboardOrg({
           icon={<span>🔄</span>}
           tone="orange"
           tag="requer ação"
-        />
-        <StatCard
-          title="Rascunhos pendentes"
-          value={relatoriosRascunho}
-          icon={<span>📝</span>}
-          tone="red"
-          tag="a enviar"
         />
       </section>
 
@@ -176,67 +182,60 @@ export default function DashboardOrg({
             />
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            {pctMetas}% das metas atingidas
+            {goalsSummary.done} concluída{goalsSummary.done === 1 ? "" : "s"}
+            {metasEmAndamento > 0 ? ` · ${metasEmAndamento} em andamento` : ""} ·{" "}
+            {pctMetas}% atingido
           </p>
         </div>
       </section>
 
-      {/* ── P2.3: "O que fazer agora" ── */}
-      {(relatoriosParaCorrigir.length > 0 || relatoriosParaEnviar.length > 0) && (
+      {/* ── Metas dos projetos (detalhamento) ── */}
+      <GoalsBreakdown goals={goals} />
+
+      {/* ── Próximo relatório ── */}
+      {relatoriosProximos.length > 0 && (
         <section className="overflow-hidden rounded-xl border bg-white">
           <div className="border-b bg-slate-50 px-4 py-4 sm:px-6">
             <h3 className="text-sm font-semibold text-slate-900">
-              O que fazer agora
+              Próximo relatório
             </h3>
             <p className="mt-0.5 text-xs text-slate-500">
-              Itens que precisam da sua atenção, por prioridade.
+              Relatórios que precisam da sua atenção, dos mais recentes para os mais antigos.
             </p>
           </div>
 
           <ul className="divide-y divide-slate-200">
-            {relatoriosParaCorrigir.map((r: any) => (
-              <li
-                key={r.id}
-                className="flex items-center justify-between gap-4 p-4 sm:px-6"
-              >
-                <div className="min-w-0">
-                  <Link
-                    href={`/dashboard/reports/${r.id}`}
-                    className="block truncate text-sm font-semibold text-blue-600 hover:underline"
-                  >
-                    {r.title || "Sem título"}
-                  </Link>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    {r.project_label || "Projeto vinculado"} · {formatarData(r.created_at)}
-                  </p>
-                </div>
-                <span className="shrink-0 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700">
-                  Corrigir
-                </span>
-              </li>
-            ))}
-
-            {relatoriosParaEnviar.map((r: any) => (
-              <li
-                key={r.id}
-                className="flex items-center justify-between gap-4 p-4 sm:px-6"
-              >
-                <div className="min-w-0">
-                  <Link
-                    href={`/dashboard/reports/${r.id}`}
-                    className="block truncate text-sm font-semibold text-blue-600 hover:underline"
-                  >
-                    {r.title || "Sem título"}
-                  </Link>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    {r.project_label || "Projeto vinculado"} · {formatarData(r.created_at)}
-                  </p>
-                </div>
-                <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
-                  Enviar
-                </span>
-              </li>
-            ))}
+            {relatoriosProximos.map((r: any) => {
+              const isReturned =
+                String(r.status ?? "").toUpperCase() === "RETURNED";
+              return (
+                <li
+                  key={r.id}
+                  className="flex items-center justify-between gap-4 p-4 sm:px-6"
+                >
+                  <div className="min-w-0">
+                    <Link
+                      href={`/dashboard/reports/${r.id}`}
+                      className="block truncate text-sm font-semibold text-blue-600 hover:underline"
+                    >
+                      {r.title || "Sem título"}
+                    </Link>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {r.project_label || "Projeto vinculado"} · {formatarData(r.updated_at ?? r.created_at)}
+                    </p>
+                  </div>
+                  {isReturned ? (
+                    <span className="shrink-0 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700">
+                      Corrigir
+                    </span>
+                  ) : (
+                    <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
+                      Enviar
+                    </span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

@@ -11,7 +11,7 @@ export async function createExportRecord(
   filePath: string,
   userId: string,
 ): Promise<ReportExportRow> {
-  const supabase = createClient();
+  const supabase = createClient() as any;
   const { data, error } = await supabase
     .from("report_exports")
     .insert({
@@ -44,7 +44,7 @@ export async function createExportRecord(
 }
 
 export async function listExportsByReport(reportId: string): Promise<ReportExportWithUrl[]> {
-  const supabase = createClient();
+  const supabase = createClient() as any;
   const { data, error } = await supabase
     .from("report_exports")
     .select("*")

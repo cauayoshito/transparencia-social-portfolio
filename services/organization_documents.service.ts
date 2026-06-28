@@ -12,7 +12,7 @@ export type OrgDocumentRow = {
 };
 
 export async function listOrgDocuments(orgId: string) {
-  const supabase = createClient();
+  const supabase = createClient() as any;
   const { data, error } = await supabase
     .from("organization_documents")
     .select("*")
@@ -31,7 +31,7 @@ export async function upsertOrgDocumentRow(params: {
   isSent?: boolean;
   sentAt?: string | null;
 }) {
-  const supabase = createClient();
+  const supabase = createClient() as any;
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -75,7 +75,7 @@ export async function upsertOrgDocumentRow(params: {
 }
 
 export async function deleteOrgDocumentRow(docId: string) {
-  const supabase = createClient();
+  const supabase = createClient() as any;
   const { data: row, error: readErr } = await supabase
     .from("organization_documents")
     .select("id, file_path, organization_id")
@@ -102,7 +102,7 @@ export async function createSignedUrl(
   path: string,
   expiresInSeconds = 300
 ) {
-  const supabase = createClient();
+  const supabase = createClient() as any;
   const { data, error } = await supabase.storage
     .from(bucket)
     .createSignedUrl(path, expiresInSeconds);
