@@ -1,5 +1,8 @@
 import Link from "next/link";
 import StatCard from "@/components/dashboard/StatCard";
+import GoalsBreakdown, {
+  type GoalItem,
+} from "@/components/dashboard/GoalsBreakdown";
 import {
   formatarData,
   projectStatusLabel,
@@ -12,6 +15,7 @@ type Props = {
   projetos: any[];
   relatorios: any[];
   goalsSummary: { total: number; done: number };
+  goals?: GoalItem[];
   milestonesSummary: { total: number; done: number };
 };
 
@@ -20,6 +24,7 @@ export default function DashboardOrg({
   projetos,
   relatorios,
   goalsSummary,
+  goals = [],
   milestonesSummary,
 }: Props) {
   // ── KPIs ──
@@ -43,6 +48,9 @@ export default function DashboardOrg({
   // ── Execução & Metas ──
   const pctExecucao = pct(milestonesSummary.done, milestonesSummary.total);
   const pctMetas = pct(goalsSummary.done, goalsSummary.total);
+  const metasEmAndamento = goals.filter(
+    (g) => String(g.status ?? "").toUpperCase() === "IN_PROGRESS"
+  ).length;
 
   // ── "Próximo relatório" — relatórios que requerem ação, mais recentes primeiro ──
   const relatoriosProximos = relatorios
@@ -174,10 +182,15 @@ export default function DashboardOrg({
             />
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            {pctMetas}% das metas atingidas
+            {goalsSummary.done} concluída{goalsSummary.done === 1 ? "" : "s"}
+            {metasEmAndamento > 0 ? ` · ${metasEmAndamento} em andamento` : ""} ·{" "}
+            {pctMetas}% atingido
           </p>
         </div>
       </section>
+
+      {/* ── Metas dos projetos (detalhamento) ── */}
+      <GoalsBreakdown goals={goals} />
 
       {/* ── Próximo relatório ── */}
       {relatoriosProximos.length > 0 && (

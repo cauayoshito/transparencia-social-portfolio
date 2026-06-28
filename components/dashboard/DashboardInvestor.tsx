@@ -1,5 +1,8 @@
 import Link from "next/link";
 import StatCard from "@/components/dashboard/StatCard";
+import GoalsBreakdown, {
+  type GoalItem,
+} from "@/components/dashboard/GoalsBreakdown";
 import { formatarData, projectStatusLabel, pct } from "@/lib/dashboard-helpers";
 
 type OrgLite = {
@@ -14,6 +17,7 @@ type Props = {
   projetos: any[];
   relatorios: any[];
   goalsSummary: { total: number; done: number };
+  goals?: GoalItem[];
   milestonesSummary: { total: number; done: number };
   organizacoes: OrgLite[];
 };
@@ -23,6 +27,7 @@ export default function DashboardInvestor({
   projetos,
   relatorios,
   goalsSummary,
+  goals = [],
   milestonesSummary,
   organizacoes,
 }: Props) {
@@ -48,6 +53,9 @@ export default function DashboardInvestor({
   // ── Execução & Metas ──
   const pctExecucao = pct(milestonesSummary.done, milestonesSummary.total);
   const pctMetas = pct(goalsSummary.done, goalsSummary.total);
+  const metasEmAndamento = goals.filter(
+    (g) => String(g.status ?? "").toUpperCase() === "IN_PROGRESS"
+  ).length;
 
   // ── Fila de análise ──
   const filaAnalise = relatorios
@@ -223,11 +231,16 @@ export default function DashboardInvestor({
               />
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              {pctMetas}% das metas atingidas
+              {goalsSummary.done} concluída{goalsSummary.done === 1 ? "" : "s"}
+              {metasEmAndamento > 0 ? ` · ${metasEmAndamento} em andamento` : ""}{" "}
+              · {pctMetas}% atingido
             </p>
           </div>
         </div>
       </section>
+
+      {/* ── Metas dos projetos (detalhamento) ── */}
+      <GoalsBreakdown goals={goals} />
 
       {/* ── Barra de progresso de relatórios ── */}
       <section className="rounded-xl border bg-white p-5 shadow-sm">

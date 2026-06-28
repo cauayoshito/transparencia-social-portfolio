@@ -51,3 +51,21 @@ export function pct(part: number, total: number): number {
   if (total === 0) return 0;
   return Math.round((part / total) * 100);
 }
+
+/** Rótulo legível para status de meta (project_goals.status) */
+export function goalStatusLabel(v?: string | null): string {
+  const s = String(v ?? "").trim().toUpperCase();
+  if (s === "DONE") return "Concluída";
+  if (s === "IN_PROGRESS") return "Em andamento";
+  if (s === "BLOCKED") return "Bloqueada";
+  return "Planejada";
+}
+
+/** Classes Tailwind do chip de status de meta */
+export function goalStatusTone(v?: string | null): string {
+  const s = String(v ?? "").trim().toUpperCase();
+  if (s === "DONE") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (s === "IN_PROGRESS") return "border-blue-200 bg-blue-50 text-blue-700";
+  if (s === "BLOCKED") return "border-rose-200 bg-rose-50 text-rose-700";
+  return "border-slate-200 bg-slate-50 text-slate-600";
+}
