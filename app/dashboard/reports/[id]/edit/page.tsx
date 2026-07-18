@@ -168,6 +168,13 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
               🖨️ Exportar PDF
             </Link>
 
+            <a
+              href={`/dashboard/reports/${reportId}/excel`}
+              className="text-sm text-emerald-700 hover:underline"
+            >
+              📊 Gerar Excel
+            </a>
+
             <Link
               href={`/dashboard/reports/${reportId}`}
               className="text-sm text-blue-600 hover:underline"

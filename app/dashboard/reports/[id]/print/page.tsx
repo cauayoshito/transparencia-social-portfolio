@@ -167,7 +167,15 @@ export default async function ReportPrintPage({ params }: Props) {
             <strong>Salvar como PDF</strong> no diálogo do navegador.
           </p>
         </div>
-        <PrintReportButton />
+        <div className="flex items-center gap-3">
+          <a
+            href={`/dashboard/reports/${reportId}/excel`}
+            className="rounded border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-100"
+          >
+            📊 Gerar Excel
+          </a>
+          <PrintReportButton />
+        </div>
       </div>
 
       {/* Cabeçalho do documento */}
