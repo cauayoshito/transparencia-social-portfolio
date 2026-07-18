@@ -12,57 +12,78 @@ import DashboardConsultor from "@/components/dashboard/DashboardConsultor";
 
 export const dynamic = "force-dynamic";
 
-/** Lista metas (goals) com vínculo de projeto para alimentar filtros do painel */
-async function fetchGoalsList(projectIds: string[]) {
-  if (projectIds.length === 0)
-    return [] as Array<{
-      id: string;
-      project_id: string;
-      status: string;
-      title: string;
-    }>;
+const GOAL_STATUS_RANK: Record<string, number> = {
+  DONE: 0,
+  IN_PROGRESS: 1,
+  PLANNED: 2,
+  BLOCKED: 3,
+};
+
+/**
+ * Busca metas agregadas E detalhadas (sem N+1): retorna o resumo {total, done}
+ * e a lista de metas com título, status, indicador, valor-alvo e projeto.
+ */
+async function fetchGoals(projectIds: string[], projetos: any[]) {
+  const empty = { summary: { total: 0, done: 0 }, items: [] as any[] };
+  if (projectIds.length === 0) return empty;
   try {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("project_goals")
-      .select("id, project_id, status, title")
+      .select("id, title, status, indicator, target_value, project_id, sort_order")
       .in("project_id", projectIds);
-    if (error || !data) return [];
-    return data.map((g: any) => ({
-      id: String(g.id),
-      project_id: String(g.project_id),
-      status: String(g.status ?? ""),
-      title: String(g.title ?? "Meta sem título"),
-    }));
+    if (error || !data) return empty;
+
+    const labelById = new Map<string, string>();
+    for (const p of projetos) {
+      const lbl = p.title ?? p.name ?? p.project_name ?? null;
+      if (p.id && lbl) labelById.set(String(p.id), String(lbl));
+    }
+
+    const items = data
+      .map((g: any) => ({
+        id: String(g.id),
+        title: (g.title as string | null) ?? null,
+        status: (g.status as string | null) ?? null,
+        indicator: (g.indicator as string | null) ?? null,
+        target_value: (g.target_value as string | null) ?? null,
+        sort_order: Number(g.sort_order ?? 0),
+        project_label: labelById.get(String(g.project_id)) ?? null,
+      }))
+      .sort((a, b) => {
+        const ra = GOAL_STATUS_RANK[String(a.status ?? "").toUpperCase()] ?? 2;
+        const rb = GOAL_STATUS_RANK[String(b.status ?? "").toUpperCase()] ?? 2;
+        return ra - rb || a.sort_order - b.sort_order;
+      });
+
+    const total = items.length;
+    const done = items.filter(
+      (g) => String(g.status ?? "").toUpperCase() === "DONE"
+    ).length;
+
+    return { summary: { total, done }, items };
   } catch {
-    return [];
+    return empty;
   }
 }
 
-/** Lista marcos (milestones) com vínculo de projeto/meta para filtros do painel */
-async function fetchMilestonesList(projectIds: string[]) {
-  if (projectIds.length === 0)
-    return [] as Array<{
-      id: string;
-      project_id: string;
-      status: string;
-      goal_id: string | null;
-    }>;
+/** Busca milestones agregados para uma lista de projetos (sem N+1) */
+async function fetchMilestonesSummary(projectIds: string[]) {
+  if (projectIds.length === 0) return { total: 0, done: 0 };
   try {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("project_milestones")
-      .select("id, project_id, status, goal_id")
+      .select("id, status")
       .in("project_id", projectIds);
-    if (error || !data) return [];
-    return data.map((m: any) => ({
-      id: String(m.id),
-      project_id: String(m.project_id),
-      status: String(m.status ?? ""),
-      goal_id: m.goal_id ? String(m.goal_id) : null,
-    }));
+    if (error || !data) return { total: 0, done: 0 };
+    const total = data.length;
+    const done = data.filter(
+      (m: any) => String(m.status ?? "").toUpperCase() === "DONE"
+    ).length;
+    return { total, done };
   } catch {
-    return [];
+    return { total: 0, done: 0 };
   }
 }
 
@@ -115,10 +136,10 @@ export default async function DashboardPage() {
     case "INVESTOR": {
       // Dados extras para o painel do financiador
       const projectIds = projetos.map((p: any) => p.id).filter(Boolean);
-      const [organizacoes, invGoalsList, invMilestonesList] = await Promise.all([
+      const [goals, milestonesSummary, organizacoes] = await Promise.all([
+        fetchGoals(projectIds, projetos),
+        fetchMilestonesSummary(projectIds),
         fetchOrganizationsFromProjects(projetos),
-        fetchGoalsList(projectIds),
-        fetchMilestonesList(projectIds),
       ]);
 
       return (
@@ -126,9 +147,10 @@ export default async function DashboardPage() {
           nome={nome}
           projetos={projetos}
           relatorios={relatorios}
+          goalsSummary={goals.summary}
+          goals={goals.items}
+          milestonesSummary={milestonesSummary}
           organizacoes={organizacoes}
-          goalsList={invGoalsList}
-          milestonesList={invMilestonesList}
         />
       );
     }
@@ -146,21 +168,19 @@ export default async function DashboardPage() {
     default: {
       // Dados extras para o painel da organização
       const orgProjectIds = projetos.map((p: any) => p.id).filter(Boolean);
-      const [orgGoalsList, orgMilestonesList, orgOrganizacoes] =
-        await Promise.all([
-          fetchGoalsList(orgProjectIds),
-          fetchMilestonesList(orgProjectIds),
-          fetchOrganizationsFromProjects(projetos),
-        ]);
+      const [orgGoals, orgMilestonesSummary] = await Promise.all([
+        fetchGoals(orgProjectIds, projetos),
+        fetchMilestonesSummary(orgProjectIds),
+      ]);
 
       return (
         <DashboardOrg
           nome={nome}
           projetos={projetos}
           relatorios={relatorios}
-          goalsList={orgGoalsList}
-          milestonesList={orgMilestonesList}
-          organizacoes={orgOrganizacoes}
+          goalsSummary={orgGoals.summary}
+          goals={orgGoals.items}
+          milestonesSummary={orgMilestonesSummary}
         />
       );
     }

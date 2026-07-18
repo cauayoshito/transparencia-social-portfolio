@@ -51,7 +51,7 @@ export type ProfileLite = {
 export async function listOrganizationsForUser(orgIds: string[]) {
   if (!Array.isArray(orgIds) || orgIds.length === 0) return [];
 
-  const supabase = createClient();
+  const supabase = createClient() as any;
 
   const { data, error } = await supabase
     .from("organizations")
@@ -73,7 +73,7 @@ export async function listOrganizationsForUser(orgIds: string[]) {
 }
 
 export async function getOrganizationByIdForUser(orgId: string) {
-  const supabase = createClient();
+  const supabase = createClient() as any;
 
   const { data, error } = await supabase
     .from("organizations")
@@ -89,7 +89,7 @@ export async function updateOrganization(
   orgId: string,
   patch: Partial<Organization>
 ) {
-  const supabase = createClient();
+  const supabase = createClient() as any;
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -109,7 +109,7 @@ export async function updateOrganization(
 export async function listOrganizationMembers(
   orgId: string
 ): Promise<OrgMemberRow[]> {
-  const supabase = createClient();
+  const supabase = createClient() as any;
 
   const { data, error } = await supabase
     .from("organization_memberships")
@@ -128,7 +128,7 @@ export async function listOrganizationMembers(
 }
 
 export async function getProfileById(profileId: string): Promise<ProfileLite> {
-  const supabase = createClient();
+  const supabase = createClient() as any;
 
   const { data, error } = await supabase
     .from("profiles")

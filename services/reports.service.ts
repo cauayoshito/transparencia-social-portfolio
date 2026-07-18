@@ -175,21 +175,21 @@ export async function listReportsForUser(userId: string) {
   const joinAttempts = [
     {
       select: `
-        id, title, status, created_at, period_start, period_end, project_id,
+        id, title, status, created_at, updated_at, period_start, period_end, project_id,
         projects:project_id ( id, name )
       `,
       pick: (r: any) => r.projects?.name ?? null,
     },
     {
       select: `
-        id, title, status, created_at, period_start, period_end, project_id,
+        id, title, status, created_at, updated_at, period_start, period_end, project_id,
         projects:project_id ( id, title )
       `,
       pick: (r: any) => r.projects?.title ?? null,
     },
     {
       select: `
-        id, title, status, created_at, period_start, period_end, project_id,
+        id, title, status, created_at, updated_at, period_start, period_end, project_id,
         projects:project_id ( id, project_name )
       `,
       pick: (r: any) => r.projects?.project_name ?? null,
@@ -209,6 +209,7 @@ export async function listReportsForUser(userId: string) {
         title: (r.title as string | null) ?? null,
         status: r.status as string,
         created_at: r.created_at as string,
+        updated_at: (r.updated_at as string | null) ?? null,
         period_start: r.period_start as string,
         period_end: r.period_end as string,
         project_id: r.project_id as string,
@@ -221,7 +222,7 @@ export async function listReportsForUser(userId: string) {
   const { data: raw, error: repErr } = await db
     .from("reports")
     .select(
-      "id, title, status, created_at, period_start, period_end, project_id"
+      "id, title, status, created_at, updated_at, period_start, period_end, project_id"
     )
     .in("project_id", accessibleProjectIds)
     .order("created_at", { ascending: false });
@@ -266,6 +267,7 @@ export async function listReportsForUser(userId: string) {
     title: (r.title as string | null) ?? null,
     status: r.status as string,
     created_at: r.created_at as string,
+    updated_at: (r.updated_at as string | null) ?? null,
     period_start: r.period_start as string,
     period_end: r.period_end as string,
     project_id: r.project_id as string,

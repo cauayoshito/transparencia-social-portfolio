@@ -19,6 +19,7 @@ export type ProjectPlanSchedule = Record<string, unknown> & {
 
 export type ProjectPlanData = Record<string, unknown> & {
   objective_general: string;
+  objective_specific: string;
   methodology: string;
   goals: ProjectGoal[];
   schedule: ProjectPlanSchedule;
@@ -87,12 +88,6 @@ export function readProjectPlanObjective(input: unknown): string {
   return asString(raw.objective_general) || asString(raw.objective);
 }
 
-export function readProjectPlanMethodology(input: unknown): string {
-  const raw = asRecord(input);
-
-  return asString(raw.methodology);
-}
-
 export function normalizeProjectPlanData(input: unknown): ProjectPlanData {
   const raw = asRecord(input);
   const { objective: _legacyObjective, ...rest } = raw;
@@ -112,7 +107,8 @@ export function normalizeProjectPlanData(input: unknown): ProjectPlanData {
   return {
     ...rest,
     objective_general: readProjectPlanObjective(raw),
-    methodology: readProjectPlanMethodology(raw),
+    objective_specific: asString(raw.objective_specific),
+    methodology: asString(raw.methodology),
     goals,
     schedule: {
       ...schedule,
@@ -124,15 +120,16 @@ export function normalizeProjectPlanData(input: unknown): ProjectPlanData {
 export function buildProjectPlanData(
   input: unknown,
   objectiveGeneral: string,
-  methodology?: string
+  objectiveSpecific = "",
+  methodology = ""
 ): ProjectPlanData {
   const normalized = normalizeProjectPlanData(input);
 
   return {
     ...normalized,
     objective_general: objectiveGeneral.trim(),
-    methodology:
-      methodology !== undefined ? methodology.trim() : normalized.methodology,
+    objective_specific: objectiveSpecific.trim(),
+    methodology: methodology.trim(),
     goals: normalized.goals,
     schedule: {
       ...normalized.schedule,

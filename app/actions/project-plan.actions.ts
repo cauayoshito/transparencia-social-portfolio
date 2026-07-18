@@ -28,6 +28,7 @@ export async function saveProjectPlanAction(formData: FormData) {
 
   const projectId = asString(formData.get("project_id")).trim();
   const objective = asString(formData.get("objective")).trim();
+  const objectiveSpecific = asString(formData.get("objective_specific")).trim();
   const methodology = asString(formData.get("methodology")).trim();
 
   if (!projectId) {
@@ -50,7 +51,12 @@ export async function saveProjectPlanAction(formData: FormData) {
     });
   }
 
-  const planData = buildProjectPlanData(project?.plan_data, objective, methodology);
+  const planData = buildProjectPlanData(
+    project?.plan_data,
+    objective,
+    objectiveSpecific,
+    methodology
+  );
 
   const { error: updateError } = await supabase
     .from("projects")
@@ -67,19 +73,14 @@ export async function saveProjectPlanAction(formData: FormData) {
   goToProjectTab(projectId, { success: "Plano salvo com sucesso." });
 }
 
-export type AutosaveProjectPlanResult = {
-  ok: boolean;
-  savedAt?: string;
-  error?: string;
-};
-
-// Autosave: persiste rascunho do plano (objetivo + metodologia) sem redirect,
-// retornando o resultado para o cliente exibir o indicador "Salvando.../Salvo".
-export async function autosaveProjectPlanAction(input: {
-  projectId: string;
-  objective: string;
-  methodology: string;
-}): Promise<AutosaveProjectPlanResult> {
+/**
+ * Autosave silencioso do plano: salva os mesmos campos de saveProjectPlanAction,
+ * mas SEM redirect/toast/revalidate — retorna apenas o resultado para o cliente
+ * atualizar o indicador "Salvando..." / "Salvo automaticamente".
+ */
+export async function autosaveProjectPlanAction(
+  formData: FormData
+): Promise<{ ok: boolean; error?: string }> {
   const supabase = createClient() as any;
 
   const {
@@ -88,14 +89,17 @@ export async function autosaveProjectPlanAction(input: {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    return { ok: false, error: "Sessão expirada. Faça login novamente." };
+    return { ok: false, error: "Sessão expirada." };
   }
 
-  const projectId = String(input?.projectId ?? "").trim();
-
+  const projectId = asString(formData.get("project_id")).trim();
   if (!projectId) {
-    return { ok: false, error: "Não foi possível identificar o projeto." };
+    return { ok: false, error: "Projeto não identificado." };
   }
+
+  const objective = asString(formData.get("objective")).trim();
+  const objectiveSpecific = asString(formData.get("objective_specific")).trim();
+  const methodology = asString(formData.get("methodology")).trim();
 
   const { data: project, error: projectError } = await supabase
     .from("projects")
@@ -104,16 +108,14 @@ export async function autosaveProjectPlanAction(input: {
     .single();
 
   if (projectError) {
-    return {
-      ok: false,
-      error: "Não foi possível carregar o plano atual do projeto.",
-    };
+    return { ok: false, error: "Não foi possível carregar o plano atual." };
   }
 
   const planData = buildProjectPlanData(
     project?.plan_data,
-    String(input?.objective ?? ""),
-    String(input?.methodology ?? "")
+    objective,
+    objectiveSpecific,
+    methodology
   );
 
   const { error: updateError } = await supabase
@@ -122,10 +124,8 @@ export async function autosaveProjectPlanAction(input: {
     .eq("id", projectId);
 
   if (updateError) {
-    return { ok: false, error: "Não foi possível salvar o rascunho do plano." };
+    return { ok: false, error: "Não foi possível salvar automaticamente." };
   }
 
-  revalidatePath(`/dashboard/projects/${projectId}`);
-
-  return { ok: true, savedAt: new Date().toISOString() };
+  return { ok: true };
 }

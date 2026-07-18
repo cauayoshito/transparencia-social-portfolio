@@ -554,7 +554,7 @@ export async function listProjectParticipants(
 export async function addProjectParticipant(
   projectId: string,
   userId: string,
-  role: "CONSULTANT" | "INVESTOR",
+  role: "CONSULTANT" | "INVESTOR" | "VIEWER",
   createdBy?: string,
 ): Promise<void> {
   const supabase = createClient();

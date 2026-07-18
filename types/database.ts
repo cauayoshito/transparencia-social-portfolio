@@ -6,12 +6,16 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+/** Status possíveis de uma meta de projeto (coluna text em project_goals.status) */
+export type ProjectGoalStatus = "PLANNED" | "IN_PROGRESS" | "DONE" | "BLOCKED"
+
+/** Status possíveis de um marco de cronograma (coluna text em project_milestones.status) */
+export type ProjectMilestoneStatus = "PLANNED" | "IN_PROGRESS" | "DONE" | "DELAYED"
+
+/** Tipo de entidade institucional vinculada (coluna text em linked_entity_type) */
+export type LinkedEntityType = "empresa" | "entidade_publica"
+
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.1"
-  }
   public: {
     Tables: {
       audit_logs: {

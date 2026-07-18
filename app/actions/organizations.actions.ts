@@ -70,7 +70,7 @@ export async function updateOrganizationAction(formData: FormData) {
   if (!orgId)
     redirect(`/dashboard/organizations?error=${enc("OrgId inválido.")}`);
 
-  const supabase = createClient();
+  const supabase = createClient() as any;
 
   const {
     data: { user },
@@ -91,7 +91,7 @@ export async function updateOrganizationAction(formData: FormData) {
     );
   }
 
-  const db = createAuthedDbClient(session.access_token);
+  const db = createAuthedDbClient(session.access_token) as any;
 
   const payload = {
     name: String(formData.get("name") ?? "").trim() || null,

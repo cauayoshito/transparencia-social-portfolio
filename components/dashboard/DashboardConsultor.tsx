@@ -2,6 +2,7 @@ import Link from "next/link";
 import StatCard from "@/components/dashboard/StatCard";
 import {
   formatarData,
+  reportStatusLabel,
   projectStatusLabel,
   pct,
 } from "@/lib/dashboard-helpers";
@@ -18,8 +19,6 @@ export default function DashboardConsultor({
   relatorios,
 }: Props) {
   // ── KPIs ──
-  const totalProjetos = projetos.length;
-
   const totalRelatorios = relatorios.length;
   const aguardandoRevisao = relatorios.filter(
     (r) => String(r.status ?? "").toUpperCase() === "SUBMITTED"
@@ -29,22 +28,30 @@ export default function DashboardConsultor({
     return s === "APPROVED" || s === "RETURNED";
   }).length;
 
-  // ── Fila de revisão (relatórios submetidos) ──
+  // ── Fila de revisão ──
   const filaRevisao = relatorios
     .filter((r) => String(r.status ?? "").toUpperCase() === "SUBMITTED")
     .slice(0, 6);
 
-  // ── Projetos para revisar (enviados / em análise) ──
-  const projetosParaRevisar = projetos.filter((p) => {
-    const s = String(p.status ?? "").toUpperCase();
-    return s === "ENVIADO" || s === "EM_ANALISE";
-  });
-  const projetosParaRevisarTop = projetosParaRevisar.slice(0, 6);
+  // ── Projetos para revisar — projetos com relatórios SUBMITTED ──
+  const submittedCountByProject = relatorios.reduce(
+    (acc: Record<string, number>, r: any) => {
+      if (
+        String(r.status ?? "").toUpperCase() === "SUBMITTED" &&
+        r.project_id
+      ) {
+        acc[r.project_id] = (acc[r.project_id] ?? 0) + 1;
+      }
+      return acc;
+    },
+    {}
+  );
+  const projetosParaRevisar = projetos.filter(
+    (p: any) => submittedCountByProject[p.id] > 0
+  );
 
-  // ── Projetos sob gestão (rascunho NÃO aparece no painel) ──
-  const projetosTop = projetos
-    .filter((p) => String(p.status ?? "").toUpperCase() !== "DRAFT")
-    .slice(0, 5);
+  // ── Projetos sob gestão ──
+  const projetosTop = projetos.slice(0, 5);
 
   return (
     <div className="min-w-0 space-y-6 sm:space-y-8">
@@ -69,37 +76,35 @@ export default function DashboardConsultor({
         </div>
       </section>
 
-      {/* ══════════════ SEÇÃO: RELATÓRIOS ══════════════ */}
-      <div>
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">
-          Relatórios
-        </h2>
+      {/* ── Relatórios ── */}
+      <h2 className="-mb-2 text-base font-semibold text-slate-900">
+        Relatórios
+      </h2>
 
-        {/* 3 cards de relatório (mantidos) */}
-        <section className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
-          <StatCard
-            title="Aguardando revisão"
-            value={aguardandoRevisao}
-            icon={<span>⏳</span>}
-            tone="orange"
-            tag="na fila"
-          />
-          <StatCard
-            title="Já revisados"
-            value={jaRevisados}
-            icon={<span>✅</span>}
-            tone="green"
-            tag={`de ${totalRelatorios}`}
-          />
-          <StatCard
-            title="Taxa de revisão"
-            value={`${pct(jaRevisados, totalRelatorios)}%`}
-            icon={<span>📊</span>}
-            tone="blue"
-            tag="concluído"
-          />
-        </section>
-      </div>
+      {/* ── KPIs ── */}
+      <section className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          title="Aguardando revisão"
+          value={aguardandoRevisao}
+          icon={<span>⏳</span>}
+          tone="orange"
+          tag="na fila"
+        />
+        <StatCard
+          title="Já revisados"
+          value={jaRevisados}
+          icon={<span>✅</span>}
+          tone="green"
+          tag={`de ${totalRelatorios}`}
+        />
+        <StatCard
+          title="Taxa de revisão"
+          value={`${pct(jaRevisados, totalRelatorios)}%`}
+          icon={<span>📊</span>}
+          tone="blue"
+          tag="concluído"
+        />
+      </section>
 
       {/* ── Alerta de fila ── */}
       {aguardandoRevisao > 0 && (
@@ -167,52 +172,27 @@ export default function DashboardConsultor({
         )}
       </section>
 
-      {/* ══════════════ SEÇÃO: PROJETOS ══════════════ */}
-      <div>
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">Projetos</h2>
+      {/* ── Projetos ── */}
+      <h2 className="-mb-2 text-base font-semibold text-slate-900">Projetos</h2>
 
-        <section className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
-          <StatCard
-            title="Projetos sob gestão"
-            value={totalProjetos}
-            icon={<span>🗂️</span>}
-            tone="blue"
-            tag="ativos"
-          />
-          <StatCard
-            title="Projetos para revisar"
-            value={projetosParaRevisar.length}
-            icon={<span>🔍</span>}
-            tone="orange"
-            tag="enviados / em análise"
-            alert={projetosParaRevisar.length > 0}
-          />
-        </section>
-      </div>
-
-      {/* ── Projetos para Revisar ── */}
-      <section className="overflow-hidden rounded-xl border bg-white">
-        <div className="flex flex-col gap-2 border-b bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <h3 className="text-sm font-semibold text-slate-900">
-            Projetos para Revisar
-          </h3>
-          <Link
-            href="/dashboard/projects"
-            className="text-sm font-medium text-blue-600 hover:underline"
-          >
-            Ver todos
-          </Link>
-        </div>
-
-        {projetosParaRevisarTop.length === 0 ? (
-          <div className="p-5 text-sm text-slate-500">
-            Nenhum projeto aguardando revisão no momento.
+      {/* ── Projetos para revisar — projetos com relatórios SUBMITTED ── */}
+      {projetosParaRevisar.length > 0 && (
+        <section className="overflow-hidden rounded-xl border border-amber-200 bg-white">
+          <div className="flex flex-col gap-2 border-b border-amber-200 bg-amber-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <h3 className="text-sm font-semibold text-amber-900">
+              Projetos para revisar
+            </h3>
+            <span className="text-xs font-medium text-amber-700">
+              {projetosParaRevisar.length} projeto
+              {projetosParaRevisar.length > 1 ? "s" : ""} com relatórios na fila
+            </span>
           </div>
-        ) : (
+
           <ul className="divide-y divide-slate-200">
-            {projetosParaRevisarTop.map((p: any) => {
+            {projetosParaRevisar.map((p: any) => {
               const label =
                 p.title ?? p.name ?? p.project_name ?? "Projeto sem título";
+              const count = submittedCountByProject[p.id] ?? 0;
               return (
                 <li
                   key={p.id}
@@ -220,24 +200,24 @@ export default function DashboardConsultor({
                 >
                   <div className="min-w-0">
                     <Link
-                      href={`/dashboard/projects/${p.id}?tab=parecer`}
+                      href={`/dashboard/projects/${p.id}?tab=overview`}
                       className="block truncate text-sm font-semibold text-blue-600 hover:underline"
                     >
                       {label}
                     </Link>
                     <p className="mt-0.5 text-xs text-slate-500">
-                      {formatarData(p.created_at)}
+                      {count} relatório{count > 1 ? "s" : ""} aguardando revisão
                     </p>
                   </div>
                   <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
-                    {projectStatusLabel(p.status)}
+                    {count} na fila
                   </span>
                 </li>
               );
             })}
           </ul>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* ── Projetos sob gestão ── */}
       <section className="overflow-hidden rounded-xl border bg-white">
