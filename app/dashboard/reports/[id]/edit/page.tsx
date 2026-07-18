@@ -161,6 +161,14 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
 
           <div className="flex items-center gap-3">
             <Link
+              href={`/dashboard/reports/${reportId}/print`}
+              target="_blank"
+              className="text-sm text-slate-700 hover:underline"
+            >
+              🖨️ Exportar PDF
+            </Link>
+
+            <Link
               href={`/dashboard/reports/${reportId}`}
               className="text-sm text-blue-600 hover:underline"
             >

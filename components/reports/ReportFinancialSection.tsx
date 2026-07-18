@@ -2,10 +2,10 @@
  * Seções financeiras do relatório (12-15 do protótipo PHI)
  * Renderizadas dentro da página de edição do relatório.
  *
- * 12. Relatório financeiro (tabela de itens orçamentários)
- * 13. Relatório de remanejamento
- * 14. Relação de recibos e notas fiscais
- * 15. Extratos bancários
+ * - Relatório financeiro (tabela de itens orçamentários)
+ * - Relatório de remanejamento
+ * - Relação de recibos e notas fiscais
+ * - Extratos bancários
  */
 
 import {
@@ -78,12 +78,12 @@ export default function ReportFinancialSection({
   return (
     <div className="space-y-8">
       {/* ============================================================ */}
-      {/* 12. Relatório financeiro */}
+      {/* Relatório financeiro */}
       {/* ============================================================ */}
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="bg-slate-800 px-4 py-3 text-center text-sm font-semibold text-white">
-          12. Relatório financeiro
-        </div>
+          Relatório financeiro
+</div>
         <p className="px-4 pt-3 text-xs text-slate-600">
           (1) Orçamento previsto, (2) Gasto total, (3) Remanejados Total, (4) Saldo anterior,
           (5) Gastos deste relatório, (6) Remanejamentos deste relatório
@@ -230,11 +230,11 @@ export default function ReportFinancialSection({
       </section>
 
       {/* ============================================================ */}
-      {/* 13. Relatório de remanejamento */}
+      {/* Relatório de remanejamento */}
       {/* ============================================================ */}
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="bg-slate-800 px-4 py-3 text-center text-sm font-semibold text-white">
-          13. Relatório de remanejamento
+          Relatório de remanejamento
         </div>
         <p className="px-4 pt-3 text-xs text-slate-600">
           Caso algum recurso tenha sido previsto para uma finalidade e utilizado em outra.
@@ -329,11 +329,11 @@ export default function ReportFinancialSection({
       </section>
 
       {/* ============================================================ */}
-      {/* 14. Relação de recibos e notas fiscais */}
+      {/* Relação de recibos e notas fiscais */}
       {/* ============================================================ */}
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="bg-slate-800 px-4 py-3 text-center text-sm font-semibold text-white">
-          14. Relação de recibos e notas fiscais
+          Relação de recibos e notas fiscais
         </div>
         <p className="px-4 pt-3 text-xs text-slate-600">
           Não serão aceitas notas fiscais fora do período de atividades do relatório.
@@ -438,11 +438,11 @@ export default function ReportFinancialSection({
       </section>
 
       {/* ============================================================ */}
-      {/* 15. Extratos Bancários */}
+      {/* Extratos Bancários */}
       {/* ============================================================ */}
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="bg-slate-800 px-4 py-3 text-center text-sm font-semibold text-white">
-          15. Extratos Bancários
+          Extratos Bancários
         </div>
 
         <div className="p-4">
