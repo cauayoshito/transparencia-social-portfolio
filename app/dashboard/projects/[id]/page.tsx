@@ -22,6 +22,10 @@ import {
 import { listProjectReportAttachments } from "@/services/reports.service";
 import { getProjectFinancialAggregation } from "@/services/report-financial.service";
 import { getProjectBudgetSnapshot } from "@/services/project-budget.service";
+import {
+  listProjectScheduleItems,
+  listProjectCounterparts,
+} from "@/services/project-schedule.service";
 import { listOrganizationMembers } from "@/services/organizations.service";
 
 import ProjectOverview from "@/components/projects/ProjectOverview";
@@ -31,6 +35,7 @@ import ProjectParecer from "@/components/projects/ProjectParecer";
 import ProjectFinancial from "@/components/projects/ProjectFinancial";
 import ProjectDocuments from "@/components/projects/ProjectDocuments";
 import ProjectParticipants from "@/components/projects/ProjectParticipants";
+import ProjectScheduleSection from "@/components/projects/ProjectScheduleSection";
 import UnsavedChangesGuard from "@/components/projects/UnsavedChangesGuard";
 import AssignConsultant from "@/components/projects/AssignConsultant";
 
@@ -183,6 +188,11 @@ export default async function DashboardProjectDetailPage({
         totals: { total_planned: 0, total_transfers_planned: 0, total_transfers_realized: 0 },
       })),
     ]);
+
+  const [scheduleItems, counterparts] = await Promise.all([
+    listProjectScheduleItems(String(project.id)).catch(() => []),
+    listProjectCounterparts(String(project.id)).catch(() => []),
+  ]);
 
   const status = toProjectStatus(project.status);
 
@@ -487,24 +497,43 @@ export default async function DashboardProjectDetailPage({
             </div>
           )}
 
-          {tab === "plan" &&
-            (isLockedForOrg ? (
-              <div className="space-y-4">
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                  Este projeto está em análise. Os dados abaixo são somente
-                  leitura até nova devolução.
+          {tab === "plan" && (
+            <div className="space-y-6">
+              {isLockedForOrg ? (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                    Este projeto está em análise. Os dados abaixo são somente
+                    leitura até nova devolução.
+                  </div>
+                  <div className="pointer-events-none select-none opacity-90">
+                    <ProjectPlan project={project as any} />
+                  </div>
                 </div>
+              ) : isReadOnly ? (
                 <div className="pointer-events-none select-none opacity-90">
                   <ProjectPlan project={project as any} />
                 </div>
-              </div>
-            ) : isReadOnly ? (
-              <div className="pointer-events-none select-none opacity-90">
+              ) : (
                 <ProjectPlan project={project as any} />
-              </div>
-            ) : (
-              <ProjectPlan project={project as any} />
-            ))}
+              )}
+
+              <ProjectScheduleSection
+                projectId={String(project.id)}
+                canEdit={canEditProjectContent}
+                scheduleItems={scheduleItems as any}
+                counterparts={counterparts as any}
+                showCounterparts={
+                  String(projectType).toUpperCase() === "INCENTIVADO"
+                }
+                defaultYear={(() => {
+                  const y = Number(
+                    String((project as any).start_date ?? "").slice(0, 4),
+                  );
+                  return Number.isFinite(y) && y > 0 ? y : undefined;
+                })()}
+              />
+            </div>
+          )}
 
           {tab === "financial" && (
             <div className="space-y-4">

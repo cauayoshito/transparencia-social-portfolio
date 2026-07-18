@@ -85,6 +85,48 @@ export async function updateProjectExtendedAction(formData: FormData) {
       updated_at: new Date().toISOString(),
     };
 
+    // ── Campos específicos por tipo de projeto (Fase 2) ──
+    // Chaves definidas nos formulários do cliente; gravadas em overview_data
+    // (JSON) com merge sobre o valor existente. Inputs usam prefixo extra__.
+    const TYPE_EXTRA_KEYS: Record<string, string[]> = {
+      INCENTIVADO: [
+        "lei_incentivo", "pronac", "proponente", "cnpj",
+        "municipios_execucao", "empresa_incentivadora", "valor_incentivado",
+      ],
+      RECURSOS_PUBLICOS: [
+        "edital_numero", "municipio_fundo", "conselho", "inscricao_conselho",
+        "termo_numero", "termo_assinatura", "termo_vigencia", "valor_aprovado",
+        "eixo_atuacao", "publico_beneficiado", "resultados_esperados",
+        "monitoramento",
+      ],
+      RECURSOS_PROPRIOS: [
+        "municipio", "responsavel_tecnico", "contato_telefone",
+        "contato_email", "empresa_investidora", "forma_repasse",
+      ],
+    };
+
+    const projectType = String((project as any).project_type ?? "")
+      .trim()
+      .toUpperCase();
+    const extraKeys = TYPE_EXTRA_KEYS[projectType] ?? [];
+
+    if (extraKeys.length > 0) {
+      const currentOverview =
+        (project as any).overview_data &&
+        typeof (project as any).overview_data === "object"
+          ? { ...(project as any).overview_data }
+          : {};
+
+      for (const key of extraKeys) {
+        const raw = formData.get(`extra__${key}`);
+        if (raw === null) continue; // campo não presente no form
+        const value = String(raw).trim();
+        currentOverview[key] = value || null;
+      }
+
+      payload.overview_data = currentOverview;
+    }
+
     const supabase = createClient();
     const { error } = await (supabase as any)
       .from("projects")

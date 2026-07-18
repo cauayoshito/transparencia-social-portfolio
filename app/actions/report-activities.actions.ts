@@ -99,6 +99,119 @@ export async function saveReportActivityAction(formData: FormData) {
   }
 }
 
+/**
+ * Puxa o cronograma cadastrado no projeto para a tabela de atividades do
+ * relatório (conforme spec: "Puxar o cronograma conforme o período da
+ * prestação de contas"). Não duplica linhas já importadas.
+ */
+export async function importScheduleToReportAction(formData: FormData) {
+  const reportId = safeText(formData.get("report_id"));
+  const go = (q: string) => redirect(editUrl(reportId, q));
+
+  try {
+    const user = await requireUser();
+    const { report } = await requireReportDraftAccess(reportId, (user as any).id);
+
+    const { listProjectScheduleItems } = await import(
+      "@/services/project-schedule.service"
+    );
+    const { listReportActivities, upsertReportActivity } = await import(
+      "@/services/report-activities.service"
+    );
+
+    const [schedule, existing] = await Promise.all([
+      listProjectScheduleItems(String((report as any).project_id)),
+      listReportActivities(reportId),
+    ]);
+
+    if (schedule.length === 0) {
+      return go(
+        `?err=${encodeURIComponent(
+          "O projeto não tem cronograma cadastrado. Cadastre na aba Plano do projeto.",
+        )}`,
+      );
+    }
+
+    const existingKeys = new Set(
+      existing.map(
+        (a) => `${a.activity_month ?? ""}|${a.activity_year ?? ""}|${a.activity}`,
+      ),
+    );
+
+    let imported = 0;
+    for (const item of schedule) {
+      const key = `${item.activity_month ?? ""}|${item.activity_year ?? ""}|${item.activity}`;
+      if (existingKeys.has(key)) continue;
+      await upsertReportActivity(reportId, {
+        activity_month: item.activity_month,
+        activity_year: item.activity_year,
+        activity: item.activity,
+      });
+      imported += 1;
+    }
+
+    revalidatePath(editUrl(reportId));
+    return go(
+      imported > 0
+        ? "?saved=1"
+        : `?err=${encodeURIComponent("Todas as atividades do cronograma já foram importadas.")}`,
+    );
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return go(
+      `?err=${encodeURIComponent(
+        err instanceof Error ? err.message : "Erro ao importar cronograma.",
+      )}`,
+    );
+  }
+}
+
+/**
+ * Avaliação de contrapartida no relatório (execução + comentário).
+ */
+export async function saveCounterpartReviewAction(formData: FormData) {
+  const reportId = safeText(formData.get("report_id"));
+  const counterpartId = safeText(formData.get("counterpart_id"));
+  const go = (q: string) => redirect(editUrl(reportId, q));
+
+  try {
+    const user = await requireUser();
+    await requireReportDraftAccess(reportId, (user as any).id);
+
+    if (!counterpartId) {
+      return go(`?err=${encodeURIComponent("Contrapartida inválida.")}`);
+    }
+
+    const supabase = createClient();
+    const { error } = await (supabase as any)
+      .from("report_counterpart_reviews")
+      .upsert(
+        {
+          report_id: reportId,
+          counterpart_id: counterpartId,
+          execution: safeText(formData.get("execution")) || null,
+          comment: safeText(formData.get("comment")) || null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "report_id,counterpart_id" },
+      );
+
+    if (error) {
+      throw new Error(`Falha ao salvar avaliação: ${error.message}`);
+    }
+
+    revalidatePath(editUrl(reportId));
+    return go("?saved=1");
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return go(
+      `?err=${encodeURIComponent(
+        err instanceof Error ? err.message : "Erro ao salvar avaliação.",
+      )}`,
+    );
+  }
+}
+
 export async function deleteReportActivityAction(formData: FormData) {
   const reportId = safeText(formData.get("report_id"));
   const activityId = safeText(formData.get("activity_id"));

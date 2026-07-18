@@ -8,6 +8,7 @@
 import {
   saveReportActivityAction,
   deleteReportActivityAction,
+  importScheduleToReportAction,
 } from "@/app/actions/report-activities.actions";
 import type { ReportActivity } from "@/services/report-activities.service";
 
@@ -33,11 +34,11 @@ const MONTHS = [
   "Dezembro",
 ];
 
+// Opções conforme os formulários de prestação de contas do cliente.
 const EXECUTION_OPTIONS = [
-  "Realizada",
-  "Parcialmente realizada",
-  "Não realizada",
-  "Em andamento",
+  "Executado plenamente",
+  "Executado parcialmente",
+  "Não executado",
 ];
 
 export default function ReportActivitiesSection({
@@ -51,10 +52,21 @@ export default function ReportActivitiesSection({
       <div className="bg-slate-800 px-4 py-3 text-center text-sm font-semibold text-white">
         Acompanhamento de atividades
       </div>
-      <p className="px-4 pt-3 text-xs text-slate-600">
-        Registre as atividades do período, a execução de cada uma e a avaliação
-        de processos, resultados parciais, comentários e observações.
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-3">
+        <p className="text-xs text-slate-600">
+          Registre as atividades do período, a execução de cada uma e a
+          avaliação de processos, resultados parciais, comentários e
+          observações.
+        </p>
+        {canEdit && (
+          <form action={importScheduleToReportAction}>
+            <input type="hidden" name="report_id" value={reportId} />
+            <button className="rounded border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-800 hover:bg-blue-100">
+              ⬇️ Importar cronograma do projeto
+            </button>
+          </form>
+        )}
+      </div>
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[820px] text-left text-xs">

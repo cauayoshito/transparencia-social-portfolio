@@ -23,6 +23,7 @@ import {
 import { getProjectByIdForUser } from "@/services/projects.service";
 import { getReportFinancialData } from "@/services/report-financial.service";
 import { listReportActivities } from "@/services/report-activities.service";
+import { listProjectCounterparts } from "@/services/project-schedule.service";
 import { createClient } from "@/lib/supabase/server";
 import PrintReportButton from "@/components/reports/PrintReportButton";
 
@@ -114,7 +115,11 @@ export default async function ReportPrintPage({ params }: Props) {
     "@/services/organizations.service"
   );
 
-  const [organization, financialData, activities, templateData] =
+  const isIncentivado =
+    String((projectFull as any).project_type ?? "").toUpperCase() ===
+    "INCENTIVADO";
+
+  const [organization, financialData, activities, templateData, counterparts] =
     await Promise.all([
       getOrganizationByIdForUser((projectFull as any).organization_id).catch(
         () => null,
@@ -124,7 +129,28 @@ export default async function ReportPrintPage({ params }: Props) {
       getReportTemplateForProjectType(
         (projectFull as any).project_type,
       ).catch(() => null),
+      isIncentivado
+        ? listProjectCounterparts(String(report.project_id)).catch(() => [])
+        : Promise.resolve([]),
     ]);
+
+  // Avaliações de contrapartida deste relatório
+  let counterpartReviews: {
+    counterpart_id: string;
+    execution: string | null;
+    comment: string | null;
+  }[] = [];
+  if (isIncentivado && counterparts.length > 0) {
+    const supabaseRev = createClient();
+    const { data: revData } = await (supabaseRev as any)
+      .from("report_counterpart_reviews")
+      .select("counterpart_id, execution, comment")
+      .eq("report_id", reportId);
+    counterpartReviews = revData ?? [];
+  }
+  const reviewByCounterpart = new Map(
+    counterpartReviews.map((r) => [r.counterpart_id, r]),
+  );
 
   const data = (currentVersion?.data as any) ?? {};
   const photos: PhotoItem[] = Array.isArray(data?.__assets?.photos)
@@ -229,6 +255,47 @@ export default async function ReportPrintPage({ params }: Props) {
           {p.observations && (
             <InfoRow label="Observações" value={String(p.observations)} />
           )}
+          {/* Campos específicos por tipo (overview_data) */}
+          {(() => {
+            const EXTRA_LABELS: Record<string, [string, string][]> = {
+              INCENTIVADO: [
+                ["lei_incentivo", "Lei de Incentivo"],
+                ["pronac", "Número PRONAC"],
+                ["proponente", "Proponente"],
+                ["cnpj", "CNPJ"],
+                ["municipios_execucao", "Município(s) de execução"],
+                ["empresa_incentivadora", "Empresa incentivadora"],
+                ["valor_incentivado", "Valor incentivado (R$)"],
+              ],
+              RECURSOS_PUBLICOS: [
+                ["edital_numero", "Número do Edital"],
+                ["municipio_fundo", "Município do Fundo"],
+                ["conselho", "Conselho responsável"],
+                ["inscricao_conselho", "Inscrição no conselho"],
+                ["termo_numero", "Nº do Termo"],
+                ["termo_assinatura", "Data de assinatura"],
+                ["termo_vigencia", "Vigência"],
+                ["valor_aprovado", "Valor aprovado (R$)"],
+                ["eixo_atuacao", "Eixo de atuação"],
+              ],
+              RECURSOS_PROPRIOS: [
+                ["municipio", "Município"],
+                ["responsavel_tecnico", "Responsável técnico"],
+                ["contato_telefone", "Telefone"],
+                ["contato_email", "E-mail"],
+                ["empresa_investidora", "Empresa investidora"],
+                ["forma_repasse", "Forma de repasse"],
+              ],
+            };
+            const typeKey = String(p.project_type ?? "").toUpperCase();
+            const ov = (p.overview_data ?? {}) as Record<string, unknown>;
+            const rows = (EXTRA_LABELS[typeKey] ?? [])
+              .map(([k, l]) => [l, String(ov[k] ?? "").trim()] as const)
+              .filter(([, v]) => v.length > 0);
+            return rows.map(([label, value]) => (
+              <InfoRow key={label} label={label} value={value} />
+            ));
+          })()}
         </div>
       </header>
 
@@ -268,6 +335,42 @@ export default async function ReportPrintPage({ params }: Props) {
           </tbody>
         </table>
       </section>
+
+      {/* Contrapartidas (INCENTIVADO) */}
+      {isIncentivado && counterparts.length > 0 && (
+        <section className="overflow-hidden rounded border border-slate-300 break-inside-avoid print:rounded-none">
+          <SectionHeader title="Contrapartidas" />
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-300 bg-slate-100 font-semibold text-slate-700">
+                <th className="px-3 py-2">Contrapartida</th>
+                <th className="px-3 py-2">Descrição</th>
+                <th className="px-3 py-2">Execução</th>
+                <th className="px-3 py-2">Comentário</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {counterparts.map((c) => {
+                const review = reviewByCounterpart.get(c.id);
+                return (
+                  <tr key={c.id} className="align-top">
+                    <td className="px-3 py-2 font-medium">{c.title}</td>
+                    <td className="whitespace-pre-wrap px-3 py-2">
+                      {c.description ?? "-"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {review?.execution ?? "Não avaliada"}
+                    </td>
+                    <td className="whitespace-pre-wrap px-3 py-2">
+                      {review?.comment ?? "-"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {/* Registro fotográfico */}
       <section className="overflow-hidden rounded border border-slate-300 break-inside-avoid print:rounded-none">

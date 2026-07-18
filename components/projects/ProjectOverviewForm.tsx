@@ -2,6 +2,8 @@ import { updateProjectExtendedAction } from "@/app/actions/project-extended.acti
 
 type ProjectLike = {
   id: string;
+  project_type?: string | null;
+  overview_data?: Record<string, unknown> | null;
   start_date?: string | null;
   end_date?: string | null;
   state_uf?: string | null;
@@ -12,6 +14,69 @@ type ProjectLike = {
   observations?: string | null;
   is_incentivado?: boolean | null;
   target_audience?: string[] | null;
+};
+
+// ── Campos específicos por tipo de projeto (formulários do cliente) ──
+type ExtraField = {
+  key: string;
+  label: string;
+  type?: "text" | "date" | "select" | "textarea";
+  options?: string[];
+  placeholder?: string;
+};
+
+const LEIS_INCENTIVO = [
+  "Lei de Incentivo ao Esporte",
+  "Lei Rouanet",
+  "Lei da Reciclagem",
+  "Fundo da Infância e Adolescência",
+  "Fundo do Idoso",
+];
+
+const TYPE_EXTRA_FIELDS: Record<
+  string,
+  { title: string; fields: ExtraField[] }
+> = {
+  INCENTIVADO: {
+    title: "Dados do projeto incentivado",
+    fields: [
+      { key: "lei_incentivo", label: "Lei de Incentivo", type: "select", options: LEIS_INCENTIVO },
+      { key: "pronac", label: "Número PRONAC (se Lei Rouanet)" },
+      { key: "proponente", label: "Proponente" },
+      { key: "cnpj", label: "CNPJ", placeholder: "00.000.000/0000-00" },
+      { key: "municipios_execucao", label: "Município(s) de execução", placeholder: "Pode ser mais de um" },
+      { key: "empresa_incentivadora", label: "Empresa incentivadora" },
+      { key: "valor_incentivado", label: "Valor incentivado (R$)", placeholder: "0,00" },
+    ],
+  },
+  RECURSOS_PUBLICOS: {
+    title: "Dados do edital e do termo",
+    fields: [
+      { key: "edital_numero", label: "Número do Edital" },
+      { key: "municipio_fundo", label: "Município do Fundo" },
+      { key: "conselho", label: "Conselho responsável", type: "select", options: ["CMDCA", "Fundo do Idoso"] },
+      { key: "inscricao_conselho", label: "Número de inscrição no conselho" },
+      { key: "termo_numero", label: "Número do Termo de Fomento/Colaboração" },
+      { key: "termo_assinatura", label: "Data de assinatura", type: "date" },
+      { key: "termo_vigencia", label: "Vigência" },
+      { key: "valor_aprovado", label: "Valor aprovado (R$)", placeholder: "0,00" },
+      { key: "eixo_atuacao", label: "Eixo de atuação" },
+      { key: "publico_beneficiado", label: "Público beneficiado", type: "textarea" },
+      { key: "resultados_esperados", label: "Resultados esperados", type: "textarea" },
+      { key: "monitoramento", label: "Como o projeto será monitorado e avaliado?", type: "textarea" },
+    ],
+  },
+  RECURSOS_PROPRIOS: {
+    title: "Dados do investimento",
+    fields: [
+      { key: "municipio", label: "Município" },
+      { key: "responsavel_tecnico", label: "Responsável técnico" },
+      { key: "contato_telefone", label: "Telefone de contato" },
+      { key: "contato_email", label: "E-mail de contato" },
+      { key: "empresa_investidora", label: "Empresa investidora" },
+      { key: "forma_repasse", label: "Forma de repasse", type: "select", options: ["Parcela única", "Parcelado"] },
+    ],
+  },
 };
 
 type Props = {
@@ -63,6 +128,11 @@ export default function ProjectOverviewForm({ project }: Props) {
   const selectedAudiences = new Set(project.target_audience ?? []);
   const currentArea = String(project.area_of_action ?? "").trim();
   const areaIsCustom = currentArea.length > 0 && !AREA_OPTIONS.includes(currentArea);
+
+  const projectType = String(project.project_type ?? "").trim().toUpperCase();
+  const extraConfig = TYPE_EXTRA_FIELDS[projectType] ?? null;
+  const overview = (project.overview_data ?? {}) as Record<string, unknown>;
+  const extraValue = (key: string) => String(overview[key] ?? "");
 
   return (
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -213,6 +283,75 @@ export default function ProjectOverviewForm({ project }: Props) {
             ))}
           </div>
         </div>
+
+        {/* Campos específicos por tipo de projeto */}
+        {extraConfig && (
+          <div>
+            <p className="mb-2 border-b border-slate-200 pb-1 text-sm font-semibold text-slate-700">
+              {extraConfig.title}
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {extraConfig.fields.map((f) => {
+                const name = `extra__${f.key}`;
+                const value = extraValue(f.key);
+                if (f.type === "select") {
+                  const isCustom =
+                    value.length > 0 && !(f.options ?? []).includes(value);
+                  return (
+                    <label key={f.key} className="text-sm">
+                      <span className="mb-1 block font-medium text-slate-600">
+                        {f.label}
+                      </span>
+                      <select
+                        name={name}
+                        defaultValue={value}
+                        className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                      >
+                        <option value="">Selecione…</option>
+                        {(f.options ?? []).map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                        {isCustom && <option value={value}>{value}</option>}
+                      </select>
+                    </label>
+                  );
+                }
+                if (f.type === "textarea") {
+                  return (
+                    <label key={f.key} className="text-sm sm:col-span-2">
+                      <span className="mb-1 block font-medium text-slate-600">
+                        {f.label}
+                      </span>
+                      <textarea
+                        name={name}
+                        rows={2}
+                        defaultValue={value}
+                        placeholder={f.placeholder}
+                        className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                      />
+                    </label>
+                  );
+                }
+                return (
+                  <label key={f.key} className="text-sm">
+                    <span className="mb-1 block font-medium text-slate-600">
+                      {f.label}
+                    </span>
+                    <input
+                      name={name}
+                      type={f.type === "date" ? "date" : "text"}
+                      defaultValue={value}
+                      placeholder={f.placeholder}
+                      className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <label className="block text-sm">
           <span className="mb-1 block font-medium text-slate-600">

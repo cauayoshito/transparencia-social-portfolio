@@ -12,6 +12,7 @@ type ProjectLike = {
   linked_entity_type?: string | null;
   created_at?: string | null;
   description?: string | null;
+  overview_data?: Record<string, unknown> | null;
   // Campos novos alinhados com PHI (tela 3.png)
   start_date?: string | null;
   end_date?: string | null;
@@ -85,6 +86,50 @@ const TARGET_AUDIENCE_LABELS: Record<string, string> = {
   outros: "Outros",
 };
 
+// Labels dos campos específicos por tipo (chaves em projects.overview_data)
+const EXTRA_FIELD_LABELS: Record<string, { title: string; fields: [string, string][] }> = {
+  INCENTIVADO: {
+    title: "Dados do projeto incentivado",
+    fields: [
+      ["lei_incentivo", "Lei de Incentivo"],
+      ["pronac", "Número PRONAC"],
+      ["proponente", "Proponente"],
+      ["cnpj", "CNPJ"],
+      ["municipios_execucao", "Município(s) de execução"],
+      ["empresa_incentivadora", "Empresa incentivadora"],
+      ["valor_incentivado", "Valor incentivado (R$)"],
+    ],
+  },
+  RECURSOS_PUBLICOS: {
+    title: "Dados do edital e do termo",
+    fields: [
+      ["edital_numero", "Número do Edital"],
+      ["municipio_fundo", "Município do Fundo"],
+      ["conselho", "Conselho responsável"],
+      ["inscricao_conselho", "Inscrição no conselho"],
+      ["termo_numero", "Nº do Termo de Fomento/Colaboração"],
+      ["termo_assinatura", "Data de assinatura"],
+      ["termo_vigencia", "Vigência"],
+      ["valor_aprovado", "Valor aprovado (R$)"],
+      ["eixo_atuacao", "Eixo de atuação"],
+      ["publico_beneficiado", "Público beneficiado"],
+      ["resultados_esperados", "Resultados esperados"],
+      ["monitoramento", "Monitoramento e avaliação"],
+    ],
+  },
+  RECURSOS_PROPRIOS: {
+    title: "Dados do investimento",
+    fields: [
+      ["municipio", "Município"],
+      ["responsavel_tecnico", "Responsável técnico"],
+      ["contato_telefone", "Telefone de contato"],
+      ["contato_email", "E-mail de contato"],
+      ["empresa_investidora", "Empresa investidora"],
+      ["forma_repasse", "Forma de repasse"],
+    ],
+  },
+};
+
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid grid-cols-[180px_1fr] gap-2 border-b border-slate-100 py-2.5 text-sm last:border-b-0">
@@ -101,6 +146,15 @@ export default function ProjectOverview({
 }: Props) {
   const title = project.title ?? project.name ?? "Projeto sem título";
   const audiences = project.target_audience ?? [];
+
+  const projectTypeKey = String(project.project_type ?? "").trim().toUpperCase();
+  const extraConfig = EXTRA_FIELD_LABELS[projectTypeKey] ?? null;
+  const overview = (project.overview_data ?? {}) as Record<string, unknown>;
+  const extraRows = extraConfig
+    ? extraConfig.fields
+        .map(([key, label]) => [label, String(overview[key] ?? "").trim()] as const)
+        .filter(([, v]) => v.length > 0)
+    : [];
 
   return (
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -182,6 +236,20 @@ export default function ProjectOverview({
             )}
           />
         </div>
+
+        {/* Campos específicos por tipo de projeto */}
+        {extraRows.length > 0 && extraConfig && (
+          <div className="mt-4">
+            <p className="mb-1 text-sm font-semibold text-slate-700">
+              {extraConfig.title}
+            </p>
+            <div className="space-y-0">
+              {extraRows.map(([label, value]) => (
+                <InfoRow key={label} label={label} value={value} />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Público-alvo (checkboxes style do PHI) */}
         {audiences.length > 0 && (

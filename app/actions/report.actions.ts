@@ -522,6 +522,16 @@ export async function uploadReportPhotoAction(
       );
     }
 
+    // Spec do cliente: até 15 fotos por relatório.
+    const versionForLimit = await getCurrentVersion(reportId);
+    const existingPhotos =
+      ((versionForLimit as any)?.data as any)?.__assets?.photos ?? [];
+    if (Array.isArray(existingPhotos) && existingPhotos.length >= 15) {
+      return go(
+        `?err=${encodeURIComponent("Limite de 15 fotos por relatório atingido.")}`
+      );
+    }
+
     const now = new Date();
     const stamp = now.toISOString().replace(/[:.]/g, "-");
     const clean = safeFileName(file.name || "foto.jpg");

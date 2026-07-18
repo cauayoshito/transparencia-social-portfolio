@@ -14,7 +14,9 @@ import {
 import { getReportFinancialData } from "@/services/report-financial.service";
 import ReportFinancialSection from "@/components/reports/ReportFinancialSection";
 import ReportActivitiesSection from "@/components/reports/ReportActivitiesSection";
+import ReportCounterpartsSection from "@/components/reports/ReportCounterpartsSection";
 import { listReportActivities } from "@/services/report-activities.service";
+import { listProjectCounterparts } from "@/services/project-schedule.service";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -116,16 +118,35 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
   const photos: PhotoItem[] = Array.isArray(data?.__assets?.photos)
     ? data.__assets.photos
     : [];
-  const [photosWithUrls, financialData, activities] = await Promise.all([
-    Promise.all(
-      photos.map(async (p) => ({
-        ...p,
-        signedUrl: await signedUrlFor(p.path),
-      }))
-    ),
-    getReportFinancialData(reportId),
-    listReportActivities(reportId).catch(() => []),
-  ]);
+  const isIncentivado =
+    String((projectFull as any).project_type ?? "").toUpperCase() ===
+    "INCENTIVADO";
+
+  const [photosWithUrls, financialData, activities, counterparts] =
+    await Promise.all([
+      Promise.all(
+        photos.map(async (p) => ({
+          ...p,
+          signedUrl: await signedUrlFor(p.path),
+        }))
+      ),
+      getReportFinancialData(reportId),
+      listReportActivities(reportId).catch(() => []),
+      isIncentivado
+        ? listProjectCounterparts(String(report.project_id)).catch(() => [])
+        : Promise.resolve([]),
+    ]);
+
+  // Avaliações de contrapartida já registradas neste relatório
+  let counterpartReviews: any[] = [];
+  if (isIncentivado && counterparts.length > 0) {
+    const supabase2 = createClient();
+    const { data: revData } = await (supabase2 as any)
+      .from("report_counterpart_reviews")
+      .select("counterpart_id, execution, comment")
+      .eq("report_id", reportId);
+    counterpartReviews = revData ?? [];
+  }
 
   const periodYear = Number(String(report.period_start ?? "").slice(0, 4));
   const defaultYear = Number.isFinite(periodYear) && periodYear > 0
@@ -234,6 +255,16 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
         activities={activities}
         defaultYear={defaultYear}
       />
+
+      {/* Contrapartidas (somente projetos incentivados) */}
+      {isIncentivado && (
+        <ReportCounterpartsSection
+          reportId={reportId}
+          canEdit={canEdit}
+          counterparts={counterparts as any}
+          reviews={counterpartReviews as any}
+        />
+      )}
 
       {/* Registro Fotográfico */}
       <section className="rounded-xl border bg-white p-4">

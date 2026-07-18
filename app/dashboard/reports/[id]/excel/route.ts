@@ -17,6 +17,8 @@ import {
 import { getProjectByIdForUser } from "@/services/projects.service";
 import { getReportFinancialData } from "@/services/report-financial.service";
 import { listReportActivities } from "@/services/report-activities.service";
+import { listProjectCounterparts } from "@/services/project-schedule.service";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -116,7 +118,11 @@ export async function GET(
     "@/services/organizations.service"
   );
 
-  const [organization, financialData, activities, templateData] =
+  const isIncentivado =
+    String((projectFull as any).project_type ?? "").toUpperCase() ===
+    "INCENTIVADO";
+
+  const [organization, financialData, activities, templateData, counterparts] =
     await Promise.all([
       getOrganizationByIdForUser((projectFull as any).organization_id).catch(
         () => null,
@@ -126,7 +132,27 @@ export async function GET(
       getReportTemplateForProjectType(
         (projectFull as any).project_type,
       ).catch(() => null),
+      isIncentivado
+        ? listProjectCounterparts(String(report.project_id)).catch(() => [])
+        : Promise.resolve([]),
     ]);
+
+  let counterpartReviews: {
+    counterpart_id: string;
+    execution: string | null;
+    comment: string | null;
+  }[] = [];
+  if (isIncentivado && counterparts.length > 0) {
+    const supabaseRev = createClient();
+    const { data: revData } = await (supabaseRev as any)
+      .from("report_counterpart_reviews")
+      .select("counterpart_id, execution, comment")
+      .eq("report_id", reportId);
+    counterpartReviews = revData ?? [];
+  }
+  const reviewByCounterpart = new Map(
+    counterpartReviews.map((r) => [r.counterpart_id, r]),
+  );
 
   const p = projectFull as any;
   const data = (currentVersion?.data as any) ?? {};
@@ -169,9 +195,69 @@ export async function GET(
       audiences.map((a) => TARGET_AUDIENCE_LABELS[a] ?? a).join(", ") || "-",
     ],
     ["Observações", text(p.observations, "-")],
+    // Campos específicos por tipo (overview_data)
+    ...(() => {
+      const EXTRA_LABELS: Record<string, [string, string][]> = {
+        INCENTIVADO: [
+          ["lei_incentivo", "Lei de Incentivo"],
+          ["pronac", "Número PRONAC"],
+          ["proponente", "Proponente"],
+          ["cnpj", "CNPJ"],
+          ["municipios_execucao", "Município(s) de execução"],
+          ["empresa_incentivadora", "Empresa incentivadora"],
+          ["valor_incentivado", "Valor incentivado (R$)"],
+        ],
+        RECURSOS_PUBLICOS: [
+          ["edital_numero", "Número do Edital"],
+          ["municipio_fundo", "Município do Fundo"],
+          ["conselho", "Conselho responsável"],
+          ["inscricao_conselho", "Inscrição no conselho"],
+          ["termo_numero", "Nº do Termo"],
+          ["termo_assinatura", "Data de assinatura"],
+          ["termo_vigencia", "Vigência"],
+          ["valor_aprovado", "Valor aprovado (R$)"],
+          ["eixo_atuacao", "Eixo de atuação"],
+          ["publico_beneficiado", "Público beneficiado"],
+          ["resultados_esperados", "Resultados esperados"],
+          ["monitoramento", "Monitoramento e avaliação"],
+        ],
+        RECURSOS_PROPRIOS: [
+          ["municipio", "Município"],
+          ["responsavel_tecnico", "Responsável técnico"],
+          ["contato_telefone", "Telefone"],
+          ["contato_email", "E-mail"],
+          ["empresa_investidora", "Empresa investidora"],
+          ["forma_repasse", "Forma de repasse"],
+        ],
+      };
+      const typeKey = String(p.project_type ?? "").toUpperCase();
+      const ov = (p.overview_data ?? {}) as Record<string, unknown>;
+      return (EXTRA_LABELS[typeKey] ?? [])
+        .map(([k, l]) => [l, String(ov[k] ?? "").trim()] as const)
+        .filter(([, v]) => v.length > 0)
+        .map(([l, v]) => [l, v] as unknown[]);
+    })(),
     [],
     ["Documento gerado em", formatDate(new Date().toISOString())],
   ]);
+
+  // ── Contrapartidas (INCENTIVADO) ──
+  if (isIncentivado) {
+    addSheet(wb, "Contrapartidas", [
+      ["Contrapartida", "Descrição", "Execução", "Comentário"],
+      ...(counterparts.length
+        ? counterparts.map((c) => {
+            const review = reviewByCounterpart.get(c.id);
+            return [
+              text(c.title),
+              text(c.description, "-"),
+              text(review?.execution, "Não avaliada"),
+              text(review?.comment, "-"),
+            ];
+          })
+        : [["Nenhuma contrapartida pactuada.", "", "", ""]]),
+    ]);
+  }
 
   // ── Atividades ──
   addSheet(wb, "Atividades", [
