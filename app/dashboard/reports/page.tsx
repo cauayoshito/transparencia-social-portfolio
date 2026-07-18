@@ -77,7 +77,19 @@ async function doDelete(reportId: string) {
   await deleteReportAction(reportId);
 }
 
-export default async function DashboardReportsPage() {
+type PageProps = {
+  searchParams?: { status?: string };
+};
+
+const STATUS_FILTERS = [
+  { key: "ALL", label: "Todos" },
+  { key: "DRAFT", label: "Rascunho" },
+  { key: "SUBMITTED", label: "Enviados" },
+  { key: "RETURNED", label: "Devolvidos" },
+  { key: "APPROVED", label: "Aprovados" },
+] as const;
+
+export default async function DashboardReportsPage({ searchParams }: PageProps) {
   const user = await requireUser();
 
   // Resolver perfil
@@ -112,9 +124,31 @@ export default async function DashboardReportsPage() {
       : "Acompanhe os relatórios vinculados aos projetos da sua organização.";
 
   // Ações por perfil
-  const canCreate = role === "INVESTOR";
-  const canDuplicate = role === "INVESTOR";
-  const canDelete = role === "INVESTOR";
+  // Relatórios (prestação de contas) são criados pela ORG; o financiador também
+  // pode criar (mesmo critério da createReportAction). Consultor não cria.
+  const canCreate = role === "ORG" || role === "INVESTOR";
+  const canDuplicate = role === "ORG" || role === "INVESTOR";
+  const canDelete = role === "ORG" || role === "INVESTOR";
+
+  // ── Filtro de status (navegação por querystring) ──
+  const activeStatus = String(searchParams?.status ?? "ALL").toUpperCase();
+  const allReports = reports ?? [];
+  const statusCounts = STATUS_FILTERS.reduce((acc, f) => {
+    acc[f.key] =
+      f.key === "ALL"
+        ? allReports.length
+        : allReports.filter(
+            (r: any) => String(r.status ?? "").toUpperCase() === f.key
+          ).length;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const visibleReports =
+    activeStatus === "ALL"
+      ? allReports
+      : allReports.filter(
+          (r: any) => String(r.status ?? "").toUpperCase() === activeStatus
+        );
 
   return (
     <main className="mx-auto max-w-6xl p-6 space-y-6">
@@ -240,6 +274,39 @@ export default async function DashboardReportsPage() {
               ? "Acompanhe, duplique ou exclua relatórios existentes."
               : "Clique em Abrir para visualizar ou avaliar o relatório."}
           </p>
+
+          {/* Filtro de status */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {STATUS_FILTERS.map((f) => {
+              const isActive = activeStatus === f.key;
+              const href =
+                f.key === "ALL"
+                  ? "/dashboard/reports"
+                  : `/dashboard/reports?status=${f.key}`;
+              return (
+                <Link
+                  key={f.key}
+                  href={href}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition ${
+                    isActive
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {f.label}
+                  <span
+                    className={`rounded-full px-1.5 ${
+                      isActive
+                        ? "bg-white/20 text-white"
+                        : "bg-slate-100 text-slate-500"
+                    }`}
+                  >
+                    {statusCounts[f.key] ?? 0}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -268,7 +335,7 @@ export default async function DashboardReportsPage() {
             </thead>
 
             <tbody>
-              {(reports ?? []).map((r: any) => {
+              {visibleReports.map((r: any) => {
                 const status = String(r.status ?? "");
                 const isDraft = status.toUpperCase() === "DRAFT";
                 const statusLabel =
@@ -344,13 +411,18 @@ export default async function DashboardReportsPage() {
                 );
               })}
 
-              {(reports ?? []).length === 0 && (
+              {visibleReports.length === 0 && (
                 <tr>
                   <td
                     colSpan={6}
                     className="px-4 py-8 text-center text-slate-500"
                   >
-                    Nenhum relatório encontrado.
+                    {allReports.length === 0
+                      ? "Nenhum relatório encontrado."
+                      : `Nenhum relatório com o status "${
+                          STATUS_FILTERS.find((f) => f.key === activeStatus)
+                            ?.label ?? activeStatus
+                        }".`}
                   </td>
                 </tr>
               )}

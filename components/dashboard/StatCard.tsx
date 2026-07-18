@@ -6,6 +6,8 @@ type Props = {
   icon: ReactNode;
   tag?: string;
   tone?: "blue" | "orange" | "red" | "green";
+  /** Realça o card com borda/anel de atenção (ex.: rascunhos pendentes) */
+  alert?: boolean;
 };
 
 const toneMap = {
@@ -21,9 +23,15 @@ export default function StatCard({
   icon,
   tag,
   tone = "blue",
+  alert = false,
 }: Props) {
   return (
-    <div className="min-w-0 rounded-xl border bg-white p-4 shadow-sm sm:p-6">
+    <div
+      className={[
+        "min-w-0 rounded-xl border bg-white p-4 shadow-sm sm:p-6",
+        alert ? "border-amber-300 ring-2 ring-amber-200" : "",
+      ].join(" ")}
+    >
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className={["rounded-lg px-3 py-2", toneMap[tone]].join(" ")}>
           {icon}

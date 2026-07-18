@@ -27,8 +27,12 @@ type AttachmentItem = {
 type Props = {
   projectId: string;
   role?: string;
-  /** Quando false, todos os formulários ficam ocultos (somente leitura). */
+  /** Status atual do projeto (DRAFT, ENVIADO, EM_ANALISE, APROVADO, DEVOLVIDO). */
+  projectStatus?: string;
+  /** Quando false, o orçamento previsto fica somente leitura. */
   canEdit: boolean;
+  /** Cronograma de repasses só é editável após a aprovação do projeto. */
+  canEditTransfers?: boolean;
   /** Orçamento e repasses cadastrados no projeto (entrada de dados). */
   budget: ProjectBudgetSnapshot;
   /** Execução consolidada vinda dos relatórios. */
@@ -70,7 +74,9 @@ function formatDate(value: string | null | undefined) {
 export default function ProjectFinancial({
   projectId,
   role,
+  projectStatus,
   canEdit,
+  canEditTransfers = false,
   budget,
   financialData,
   legacyReceipts = [],
@@ -79,6 +85,8 @@ export default function ProjectFinancial({
 }: Props) {
   const { items, receipts, bankStatements } = financialData;
   const isInvestor = role === "INVESTOR";
+  const isApproved =
+    String(projectStatus ?? "").trim().toUpperCase() === "APROVADO";
 
   const hasNormalizedData =
     items.length > 0 || receipts.length > 0 || bankStatements.length > 0;
@@ -161,16 +169,27 @@ export default function ProjectFinancial({
                 <tr className="border-b border-slate-200 bg-blue-50 text-xs font-semibold text-slate-700">
                   <th className="px-3 py-2">Tipo</th>
                   <th className="px-3 py-2">Item</th>
-                  <th className="px-3 py-2 text-right">Valor previsto</th>
+                  <th className="px-3 py-2 text-right">Qtd.</th>
+                  <th className="px-3 py-2 text-right">Valor unitário</th>
+                  <th className="px-3 py-2 text-right">Valor total</th>
                   {canEdit && <th className="w-16 px-3 py-2">Ações</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {budget.items.map((item) => (
+                {budget.items.map((item) => {
+                  const qty = Number((item as any).quantity ?? 1) || 1;
+                  const unit = Number(
+                    (item as any).unit_amount ?? Number(item.planned_amount) / qty,
+                  );
+                  return (
                   <tr key={item.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2">{item.investment_type}</td>
                     <td className="max-w-[260px] truncate px-3 py-2">
                       {item.item_description}
+                    </td>
+                    <td className="px-3 py-2 text-right">{qty}</td>
+                    <td className="px-3 py-2 text-right">
+                      {formatCurrency(unit)}
                     </td>
                     <td className="px-3 py-2 text-right font-medium">
                       {formatCurrency(Number(item.planned_amount))}
@@ -190,11 +209,12 @@ export default function ProjectFinancial({
                       </td>
                     )}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold">
-                  <td className="px-3 py-2.5" colSpan={2}>
+                  <td className="px-3 py-2.5" colSpan={4}>
                     Total previsto
                   </td>
                   <td className="px-3 py-2.5 text-right">
@@ -214,11 +234,11 @@ export default function ProjectFinancial({
             </h3>
             <form
               action={saveProjectBudgetItemAction}
-              className="grid gap-3 sm:grid-cols-4"
+              className="grid gap-3 sm:grid-cols-6"
             >
               <input type="hidden" name="project_id" value={projectId} />
 
-              <div>
+              <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs text-slate-600">Tipo</label>
                 <select
                   name="investment_type"
@@ -248,17 +268,35 @@ export default function ProjectFinancial({
 
               <div>
                 <label className="mb-1 block text-xs text-slate-600">
-                  Valor previsto (R$)
+                  Quantidade
                 </label>
                 <input
-                  name="planned_amount"
+                  name="quantity"
+                  inputMode="decimal"
+                  defaultValue="1"
+                  placeholder="1"
+                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs text-slate-600">
+                  Valor unitário (R$)
+                </label>
+                <input
+                  name="unit_amount"
                   inputMode="decimal"
                   placeholder="0,00"
                   className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
                 />
               </div>
 
-              <div className="flex justify-end sm:col-span-4">
+              <p className="text-xs text-slate-500 sm:col-span-6">
+                O <strong>valor total</strong> de cada linha é calculado
+                automaticamente: quantidade × valor unitário.
+              </p>
+
+              <div className="flex justify-end sm:col-span-6">
                 <button className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
                   Adicionar item
                 </button>
@@ -280,11 +318,19 @@ export default function ProjectFinancial({
             <strong>Data do crédito</strong> — o resumo financeiro do relatório
             usa esses valores no cálculo do <strong>Repasse no período</strong>.
           </p>
+          {!isApproved && (
+            <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+              O cronograma de repasses fica disponível somente após a{" "}
+              <strong>aprovação do projeto</strong>.
+            </p>
+          )}
         </div>
 
         {budget.transfers.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-slate-500">
-            Nenhum repasse cadastrado.
+            {isApproved
+              ? "Nenhum repasse cadastrado."
+              : "Disponível após a aprovação do projeto."}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -296,7 +342,7 @@ export default function ProjectFinancial({
                   <th className="px-3 py-2 text-right">Valor previsto</th>
                   <th className="px-3 py-2 text-right">Valor realizado</th>
                   <th className="px-3 py-2">Data do crédito</th>
-                  {canEdit && <th className="w-16 px-3 py-2">Ações</th>}
+                  {canEditTransfers && <th className="w-16 px-3 py-2">Ações</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -315,7 +361,7 @@ export default function ProjectFinancial({
                         : "—"}
                     </td>
                     <td className="px-3 py-2">{formatDate(t.realized_at)}</td>
-                    {canEdit && (
+                    {canEditTransfers && (
                       <td className="px-3 py-2">
                         <form action={deleteProjectPlannedTransferAction}>
                           <input type="hidden" name="project_id" value={projectId} />
@@ -343,14 +389,14 @@ export default function ProjectFinancial({
                   <td className="px-3 py-2.5 text-right">
                     {formatCurrency(budget.totals.total_transfers_realized)}
                   </td>
-                  <td colSpan={canEdit ? 2 : 1} />
+                  <td colSpan={canEditTransfers ? 2 : 1} />
                 </tr>
               </tfoot>
             </table>
           </div>
         )}
 
-        {canEdit && (
+        {canEditTransfers && (
           <div className="border-t border-slate-200 bg-slate-50 p-4">
             <h3 className="mb-3 text-sm font-semibold text-slate-700">
               Adicionar repasse

@@ -24,7 +24,9 @@ import { getProjectBudgetSnapshot } from "@/services/project-budget.service";
 import { listOrganizationMembers } from "@/services/organizations.service";
 
 import ProjectOverview from "@/components/projects/ProjectOverview";
+import ProjectOverviewForm from "@/components/projects/ProjectOverviewForm";
 import ProjectPlan from "@/components/projects/ProjectPlan";
+import ProjectParecer from "@/components/projects/ProjectParecer";
 import ProjectFinancial from "@/components/projects/ProjectFinancial";
 import ProjectDocuments from "@/components/projects/ProjectDocuments";
 import ProjectParticipants from "@/components/projects/ProjectParticipants";
@@ -37,7 +39,8 @@ const tabs = [
   { key: "overview", label: "Visão geral" },
   { key: "plan", label: "Plano" },
   { key: "financial", label: "Financeiro" },
-  { key: "participants", label: "Participantes" },
+  { key: "participants", label: "Acompanhamento" },
+  { key: "parecer", label: "Parecer" },
 ] as const;
 
 type TabKey = (typeof tabs)[number]["key"];
@@ -418,7 +421,9 @@ export default async function DashboardProjectDetailPage({
 
       <nav className="-mx-4 overflow-x-auto border-b px-4 sm:mx-0 sm:px-0">
         <div className="flex min-w-max gap-4 pb-2 text-sm">
-          {tabs.map((item) => (
+          {tabs
+            .filter((item) => item.key !== "parecer" || consultant)
+            .map((item) => (
             <Link
               key={item.key}
               href={buildTabHref(String(project.id), item.key)}
@@ -438,11 +443,15 @@ export default async function DashboardProjectDetailPage({
         <div className="min-w-0">
           {tab === "overview" && (
             <div className="space-y-6">
-              <ProjectOverview
-                project={project as any}
-                organizationName={organizationName}
-                analystName={analystName}
-              />
+              {canEditProjectContent ? (
+                <ProjectOverviewForm project={project as any} />
+              ) : (
+                <ProjectOverview
+                  project={project as any}
+                  organizationName={organizationName}
+                  analystName={analystName}
+                />
+              )}
 
               {/* P0: Investidor pode atribuir/remover consultores */}
               {isInvestor && (
@@ -485,12 +494,12 @@ export default async function DashboardProjectDetailPage({
                   leitura até nova devolução.
                 </div>
                 <div className="pointer-events-none select-none opacity-90">
-                  <ProjectPlan project={project as any} />
+                  <ProjectPlan project={project as any} readOnly />
                 </div>
               </div>
             ) : isReadOnly ? (
               <div className="pointer-events-none select-none opacity-90">
-                <ProjectPlan project={project as any} />
+                <ProjectPlan project={project as any} readOnly />
               </div>
             ) : (
               <ProjectPlan project={project as any} />
@@ -498,16 +507,24 @@ export default async function DashboardProjectDetailPage({
 
           {tab === "financial" && (
             <div className="space-y-4">
-              {isLockedForOrg && (
+              {isLockedForOrg && status !== "APROVADO" && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                   Este projeto está em análise. Os dados abaixo são somente
                   leitura até nova devolução.
                 </div>
               )}
+              {status === "APROVADO" && isOrgUser && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                  Projeto aprovado. O orçamento previsto está travado; agora você
+                  pode registrar o <strong>cronograma de repasses</strong>.
+                </div>
+              )}
               <ProjectFinancial
                 projectId={String(project.id)}
                 role={role}
+                projectStatus={status}
                 canEdit={canEditProjectContent}
+                canEditTransfers={isOrgUser && status === "APROVADO"}
                 budget={projectBudget as any}
                 financialData={projectFinancialData as any}
                 legacyReceipts={reportAttachments.receipts}
@@ -534,6 +551,10 @@ export default async function DashboardProjectDetailPage({
                 participants={participants as any[]}
               />
             </div>
+          )}
+
+          {tab === "parecer" && consultant && (
+            <ProjectParecer projectId={String(project.id)} />
           )}
         </div>
       </UnsavedChangesGuard>

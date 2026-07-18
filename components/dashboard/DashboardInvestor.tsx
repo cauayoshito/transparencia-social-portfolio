@@ -1,5 +1,6 @@
 import Link from "next/link";
 import StatCard from "@/components/dashboard/StatCard";
+import DashboardOrgMetrics from "@/components/dashboard/DashboardOrgMetrics";
 import { formatarData, projectStatusLabel, pct } from "@/lib/dashboard-helpers";
 
 type OrgLite = {
@@ -9,22 +10,36 @@ type OrgLite = {
   updated_at?: string | null;
 };
 
+type GoalItem = {
+  id: string;
+  project_id: string;
+  status: string;
+  title: string;
+};
+
+type MilestoneItem = {
+  id: string;
+  project_id: string;
+  status: string;
+  goal_id: string | null;
+};
+
 type Props = {
   nome: string;
   projetos: any[];
   relatorios: any[];
-  goalsSummary: { total: number; done: number };
-  milestonesSummary: { total: number; done: number };
   organizacoes: OrgLite[];
+  goalsList?: GoalItem[];
+  milestonesList?: MilestoneItem[];
 };
 
 export default function DashboardInvestor({
   nome,
   projetos,
   relatorios,
-  goalsSummary,
-  milestonesSummary,
   organizacoes,
+  goalsList = [],
+  milestonesList = [],
 }: Props) {
   // ── Relatórios ──
   const totalRelatorios = relatorios.length;
@@ -48,17 +63,26 @@ export default function DashboardInvestor({
     (p) => String(p.status ?? "").toUpperCase() === "APROVADO"
   ).length;
 
-  // ── Execução & Metas ──
-  const pctExecucao = pct(milestonesSummary.done, milestonesSummary.total);
-  const pctMetas = pct(goalsSummary.done, goalsSummary.total);
-
   // ── Fila de análise ──
   const filaAnalise = relatorios
     .filter((r) => String(r.status ?? "").toUpperCase() === "SUBMITTED")
     .slice(0, 5);
 
-  // ── Projetos recentes ──
-  const projetosTop = projetos.slice(0, 5);
+  // ── Projetos recentes (rascunho NÃO aparece no painel geral) ──
+  const projetosTop = projetos
+    .filter((p) => String(p.status ?? "").toUpperCase() !== "DRAFT")
+    .slice(0, 5);
+
+  // Projetos com vínculo para o filtro de contexto (Org / Projeto / Meta)
+  const metricsProjects = projetos.map((p) => ({
+    id: String(p.id),
+    name: String(p.title ?? p.name ?? p.project_name ?? "Projeto sem título"),
+    organization_id: p.organization_id ? String(p.organization_id) : null,
+  }));
+  const metricsOrgs = organizacoes.map((o) => ({
+    id: String(o.id),
+    name: String(o.name ?? "Organização sem nome"),
+  }));
 
   // ── Orgs com contagem de projetos ──
   const orgComProjetos = organizacoes.map((org) => {
@@ -100,12 +124,12 @@ export default function DashboardInvestor({
         </div>
       </section>
 
-      {/* ── KPIs — Linha 1: Relatórios ── */}
-      <section>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+      {/* ══════════════ SEÇÃO: RELATÓRIOS ══════════════ */}
+      <div>
+        <h2 className="mb-3 text-lg font-semibold text-slate-900">
           Relatórios
-        </p>
-        <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-4">
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
           <StatCard
             title="Recebidos"
             value={totalRelatorios}
@@ -127,94 +151,8 @@ export default function DashboardInvestor({
             tone="orange"
             tag="aguardando"
           />
-          <StatCard
-            title="Projetos ativos"
-            value={totalProjetos}
-            icon={<span>🗂️</span>}
-            tone="blue"
-            tag={`${projetosAprovados} aprovados`}
-          />
         </div>
-      </section>
-
-      {/* ── KPIs — Linha 2: Execução & Metas (Bruno pediu) ── */}
-      <section>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-          Execução & Metas
-        </p>
-        <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
-          {/* Organizações vinculadas */}
-          <div className="rounded-xl border bg-white p-4 shadow-sm sm:p-5">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-600">
-                Organizações vinculadas
-              </div>
-              <span className="rounded-lg bg-blue-50 px-3 py-2 text-blue-700">
-                👥
-              </span>
-            </div>
-            <div className="mt-2 text-2xl font-bold text-slate-900">
-              {organizacoes.length}
-            </div>
-            <p className="mt-1 text-xs text-slate-500">
-              {organizacoes.length === 1
-                ? "organização na carteira"
-                : "organizações na carteira"}
-            </p>
-          </div>
-
-          {/* % Execução (milestones) */}
-          <div className="rounded-xl border bg-white p-4 shadow-sm sm:p-5">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-600">
-                Execução dos projetos
-              </div>
-              <span className="rounded-lg bg-emerald-50 px-3 py-2 text-emerald-700">
-                📈
-              </span>
-            </div>
-            <div className="mt-2 text-2xl font-bold text-slate-900">
-              {pctExecucao}%
-            </div>
-            <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-slate-100">
-              <div
-                className="bg-emerald-500 transition-all"
-                style={{ width: `${pctExecucao}%` }}
-              />
-            </div>
-            <p className="mt-1 text-xs text-slate-500">
-              {milestonesSummary.done} de {milestonesSummary.total} marcos
-              concluídos
-            </p>
-          </div>
-
-          {/* Metas cumpridas (goals) */}
-          <div className="rounded-xl border bg-white p-4 shadow-sm sm:p-5">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-600">Metas cumpridas</div>
-              <span className="rounded-lg bg-amber-50 px-3 py-2 text-amber-700">
-                🎯
-              </span>
-            </div>
-            <div className="mt-2 text-2xl font-bold text-slate-900">
-              {goalsSummary.done}
-              <span className="text-base font-normal text-slate-500">
-                {" "}
-                / {goalsSummary.total}
-              </span>
-            </div>
-            <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-slate-100">
-              <div
-                className="bg-amber-400 transition-all"
-                style={{ width: `${pctMetas}%` }}
-              />
-            </div>
-            <p className="mt-1 text-xs text-slate-500">
-              {pctMetas}% das metas atingidas
-            </p>
-          </div>
-        </div>
-      </section>
+      </div>
 
       {/* ── Barra de progresso de relatórios ── */}
       <section className="rounded-xl border bg-white p-5 shadow-sm">
@@ -260,6 +198,27 @@ export default function DashboardInvestor({
           </span>
         </div>
       </section>
+
+      {/* ══════════════ SEÇÃO: PROJETOS ══════════════ */}
+      <div>
+        <h2 className="mb-3 text-lg font-semibold text-slate-900">Projetos</h2>
+        <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2">
+          <StatCard
+            title="Projetos ativos"
+            value={totalProjetos}
+            icon={<span>🗂️</span>}
+            tone="blue"
+            tag={`${projetosAprovados} aprovados`}
+          />
+          <StatCard
+            title="Organizações vinculadas"
+            value={organizacoes.length}
+            icon={<span>👥</span>}
+            tone="blue"
+            tag="na carteira"
+          />
+        </div>
+      </div>
 
       {/* ── Organizações vinculadas ── */}
       <section className="overflow-hidden rounded-xl border bg-white">
@@ -422,6 +381,23 @@ export default function DashboardInvestor({
           </ul>
         )}
       </section>
+
+      {/* ══════════════ SEÇÃO: EXECUÇÃO & METAS (com filtro de contexto) ══════════════ */}
+      <div>
+        <h2 className="mb-1 text-lg font-semibold text-slate-900">
+          Execução &amp; Metas
+        </h2>
+        <p className="mb-3 text-xs text-slate-500">
+          Filtre por Organização, Projeto e Meta para ver a execução no contexto
+          desejado.
+        </p>
+        <DashboardOrgMetrics
+          projects={metricsProjects}
+          organizations={metricsOrgs}
+          goals={goalsList}
+          milestones={milestonesList}
+        />
+      </div>
     </div>
   );
 }

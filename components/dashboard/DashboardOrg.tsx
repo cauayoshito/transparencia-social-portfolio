@@ -1,33 +1,58 @@
 import Link from "next/link";
 import StatCard from "@/components/dashboard/StatCard";
+import DashboardOrgMetrics from "@/components/dashboard/DashboardOrgMetrics";
 import {
   formatarData,
   projectStatusLabel,
   projectTypeLabel,
-  pct,
 } from "@/lib/dashboard-helpers";
+
+type GoalItem = {
+  id: string;
+  project_id: string;
+  status: string;
+  title: string;
+};
+
+type MilestoneItem = {
+  id: string;
+  project_id: string;
+  status: string;
+  goal_id: string | null;
+};
 
 type Props = {
   nome: string;
   projetos: any[];
   relatorios: any[];
-  goalsSummary: { total: number; done: number };
-  milestonesSummary: { total: number; done: number };
+  goalsList?: GoalItem[];
+  milestonesList?: MilestoneItem[];
+  organizacoes?: Array<{ id: string; name: string }>;
 };
 
 export default function DashboardOrg({
   nome,
   projetos,
   relatorios,
-  goalsSummary,
-  milestonesSummary,
+  goalsList = [],
+  milestonesList = [],
+  organizacoes = [],
 }: Props) {
   // ── KPIs ──
   const totalProjetos = projetos.length;
+  // "Ativo" = projeto efetivamente aprovado. Enviado/em análise ainda não conta.
   const projetosAtivos = projetos.filter((p) => {
     const s = String(p.status ?? "").toUpperCase();
-    return s !== "DRAFT";
+    return s === "APROVADO";
   }).length;
+
+  // Contagens por PROJETO (não relatório)
+  const projetosEmCadastro = projetos.filter(
+    (p) => String(p.status ?? "").toUpperCase() === "DRAFT"
+  ).length;
+  const projetosComPendencia = projetos.filter(
+    (p) => String(p.status ?? "").toUpperCase() === "DEVOLVIDO"
+  ).length;
 
   const totalRelatorios = relatorios.length;
   const relatoriosDevolvidos = relatorios.filter(
@@ -40,19 +65,43 @@ export default function DashboardOrg({
     (r) => String(r.status ?? "").toUpperCase() === "APPROVED"
   ).length;
 
-  // ── Execução & Metas ──
-  const pctExecucao = pct(milestonesSummary.done, milestonesSummary.total);
-  const pctMetas = pct(goalsSummary.done, goalsSummary.total);
+  // ── "Próximo Relatório" — RETURNED primeiro, depois DRAFT, por prazo (period_end) ──
+  const prioridadeStatus = (status: string) => {
+    const s = status.toUpperCase();
+    if (s === "RETURNED") return 0;
+    if (s === "DRAFT") return 1;
+    return 2;
+  };
+  const tempoPrazo = (value: unknown) => {
+    const t = value ? new Date(String(value)).getTime() : NaN;
+    return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
+  };
+  const proximosRelatorios = relatorios
+    .filter((r) => {
+      const s = String(r.status ?? "").toUpperCase();
+      return s === "RETURNED" || s === "DRAFT";
+    })
+    .slice()
+    .sort((a, b) => {
+      const byStatus =
+        prioridadeStatus(String(a.status ?? "")) -
+        prioridadeStatus(String(b.status ?? ""));
+      if (byStatus !== 0) return byStatus;
+      return tempoPrazo(a.period_end) - tempoPrazo(b.period_end);
+    })
+    .slice(0, 5);
 
-  // ── "O que fazer agora" — priorizado: devolvidos > rascunhos ──
-  const relatoriosParaCorrigir = relatorios
-    .filter((r) => String(r.status ?? "").toUpperCase() === "RETURNED")
-    .slice(0, 3);
-  const relatoriosParaEnviar = relatorios
-    .filter((r) => String(r.status ?? "").toUpperCase() === "DRAFT")
-    .slice(0, 3);
+  // Projetos com vínculo para o filtro de métricas
+  const metricsProjects = projetos.map((p) => ({
+    id: String(p.id),
+    name: String(p.title ?? p.name ?? p.project_name ?? "Projeto sem título"),
+    organization_id: p.organization_id ? String(p.organization_id) : null,
+  }));
 
-  const projetosTop = projetos.slice(0, 5);
+  // ── Painel principal: rascunho (DRAFT) NÃO aparece — só em Projetos ──
+  const projetosTop = projetos
+    .filter((p) => String(p.status ?? "").toUpperCase() !== "DRAFT")
+    .slice(0, 5);
 
   return (
     <div className="min-w-0 space-y-6 sm:space-y-8">
@@ -122,121 +171,77 @@ export default function DashboardOrg({
           tag={`${relatoriosAprovados} aprovados`}
         />
         <StatCard
-          title="Devolvidos p/ ajuste"
-          value={relatoriosDevolvidos}
+          title="Projetos com Pendência"
+          value={projetosComPendencia}
           icon={<span>🔄</span>}
           tone="orange"
           tag="requer ação"
         />
         <StatCard
-          title="Rascunhos pendentes"
-          value={relatoriosRascunho}
+          title="Projetos em Cadastro"
+          value={projetosEmCadastro}
           icon={<span>📝</span>}
           tone="red"
-          tag="a enviar"
+          tag="a concluir"
+          alert
         />
       </section>
 
-      {/* ── KPIs — Linha 2: Execução & Metas (P2.4) ── */}
-      <section className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2">
-        <div className="rounded-xl border bg-white p-4 shadow-sm sm:p-5">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-slate-600">Execução dos projetos</div>
-            <span className="rounded-lg bg-emerald-50 px-3 py-2 text-emerald-700">📈</span>
-          </div>
-          <div className="mt-2 text-2xl font-bold text-slate-900">
-            {pctExecucao}%
-          </div>
-          <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-slate-100">
-            <div
-              className="bg-emerald-500 transition-all"
-              style={{ width: `${pctExecucao}%` }}
-            />
-          </div>
-          <p className="mt-1 text-xs text-slate-500">
-            {milestonesSummary.done} de {milestonesSummary.total} marcos concluídos
-          </p>
-        </div>
+      {/* ── KPIs — Linha 2: Execução & Metas (com filtros) ── */}
+      <DashboardOrgMetrics
+        projects={metricsProjects}
+        organizations={organizacoes}
+        goals={goalsList}
+        milestones={milestonesList}
+      />
 
-        <div className="rounded-xl border bg-white p-4 shadow-sm sm:p-5">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-slate-600">Metas cumpridas</div>
-            <span className="rounded-lg bg-amber-50 px-3 py-2 text-amber-700">🎯</span>
-          </div>
-          <div className="mt-2 text-2xl font-bold text-slate-900">
-            {goalsSummary.done}
-            <span className="text-base font-normal text-slate-500">
-              {" "}/ {goalsSummary.total}
-            </span>
-          </div>
-          <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-slate-100">
-            <div
-              className="bg-amber-400 transition-all"
-              style={{ width: `${pctMetas}%` }}
-            />
-          </div>
-          <p className="mt-1 text-xs text-slate-500">
-            {pctMetas}% das metas atingidas
-          </p>
-        </div>
-      </section>
-
-      {/* ── P2.3: "O que fazer agora" ── */}
-      {(relatoriosParaCorrigir.length > 0 || relatoriosParaEnviar.length > 0) && (
+      {/* ── Próximo Relatório — priorizado por data de prioridade ── */}
+      {proximosRelatorios.length > 0 && (
         <section className="overflow-hidden rounded-xl border bg-white">
           <div className="border-b bg-slate-50 px-4 py-4 sm:px-6">
             <h3 className="text-sm font-semibold text-slate-900">
-              O que fazer agora
+              Próximo Relatório
             </h3>
             <p className="mt-0.5 text-xs text-slate-500">
-              Itens que precisam da sua atenção, por prioridade.
+              Relatórios pendentes em ordem de prioridade — devolvidos primeiro,
+              depois por prazo.
             </p>
           </div>
 
           <ul className="divide-y divide-slate-200">
-            {relatoriosParaCorrigir.map((r: any) => (
-              <li
-                key={r.id}
-                className="flex items-center justify-between gap-4 p-4 sm:px-6"
-              >
-                <div className="min-w-0">
-                  <Link
-                    href={`/dashboard/reports/${r.id}`}
-                    className="block truncate text-sm font-semibold text-blue-600 hover:underline"
+            {proximosRelatorios.map((r: any) => {
+              const isReturned =
+                String(r.status ?? "").toUpperCase() === "RETURNED";
+              return (
+                <li
+                  key={r.id}
+                  className="flex items-center justify-between gap-4 p-4 sm:px-6"
+                >
+                  <div className="min-w-0">
+                    <Link
+                      href={`/dashboard/reports/${r.id}`}
+                      className="block truncate text-sm font-semibold text-blue-600 hover:underline"
+                    >
+                      {r.title || "Sem título"}
+                    </Link>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {r.project_label || "Projeto vinculado"} · Prazo:{" "}
+                      {formatarData(r.period_end)}
+                    </p>
+                  </div>
+                  <span
+                    className={[
+                      "shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium",
+                      isReturned
+                        ? "border-rose-200 bg-rose-50 text-rose-700"
+                        : "border-slate-200 bg-slate-50 text-slate-600",
+                    ].join(" ")}
                   >
-                    {r.title || "Sem título"}
-                  </Link>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    {r.project_label || "Projeto vinculado"} · {formatarData(r.created_at)}
-                  </p>
-                </div>
-                <span className="shrink-0 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700">
-                  Corrigir
-                </span>
-              </li>
-            ))}
-
-            {relatoriosParaEnviar.map((r: any) => (
-              <li
-                key={r.id}
-                className="flex items-center justify-between gap-4 p-4 sm:px-6"
-              >
-                <div className="min-w-0">
-                  <Link
-                    href={`/dashboard/reports/${r.id}`}
-                    className="block truncate text-sm font-semibold text-blue-600 hover:underline"
-                  >
-                    {r.title || "Sem título"}
-                  </Link>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    {r.project_label || "Projeto vinculado"} · {formatarData(r.created_at)}
-                  </p>
-                </div>
-                <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
-                  Enviar
-                </span>
-              </li>
-            ))}
+                    {isReturned ? "Corrigir" : "Enviar"}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

@@ -12,43 +12,57 @@ import DashboardConsultor from "@/components/dashboard/DashboardConsultor";
 
 export const dynamic = "force-dynamic";
 
-/** Busca goals agregados para uma lista de projetos (sem N+1) */
-async function fetchGoalsSummary(projectIds: string[]) {
-  if (projectIds.length === 0) return { total: 0, done: 0 };
+/** Lista metas (goals) com vínculo de projeto para alimentar filtros do painel */
+async function fetchGoalsList(projectIds: string[]) {
+  if (projectIds.length === 0)
+    return [] as Array<{
+      id: string;
+      project_id: string;
+      status: string;
+      title: string;
+    }>;
   try {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("project_goals")
-      .select("id, status")
+      .select("id, project_id, status, title")
       .in("project_id", projectIds);
-    if (error || !data) return { total: 0, done: 0 };
-    const total = data.length;
-    const done = data.filter(
-      (g: any) => String(g.status ?? "").toUpperCase() === "DONE"
-    ).length;
-    return { total, done };
+    if (error || !data) return [];
+    return data.map((g: any) => ({
+      id: String(g.id),
+      project_id: String(g.project_id),
+      status: String(g.status ?? ""),
+      title: String(g.title ?? "Meta sem título"),
+    }));
   } catch {
-    return { total: 0, done: 0 };
+    return [];
   }
 }
 
-/** Busca milestones agregados para uma lista de projetos (sem N+1) */
-async function fetchMilestonesSummary(projectIds: string[]) {
-  if (projectIds.length === 0) return { total: 0, done: 0 };
+/** Lista marcos (milestones) com vínculo de projeto/meta para filtros do painel */
+async function fetchMilestonesList(projectIds: string[]) {
+  if (projectIds.length === 0)
+    return [] as Array<{
+      id: string;
+      project_id: string;
+      status: string;
+      goal_id: string | null;
+    }>;
   try {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("project_milestones")
-      .select("id, status")
+      .select("id, project_id, status, goal_id")
       .in("project_id", projectIds);
-    if (error || !data) return { total: 0, done: 0 };
-    const total = data.length;
-    const done = data.filter(
-      (m: any) => String(m.status ?? "").toUpperCase() === "DONE"
-    ).length;
-    return { total, done };
+    if (error || !data) return [];
+    return data.map((m: any) => ({
+      id: String(m.id),
+      project_id: String(m.project_id),
+      status: String(m.status ?? ""),
+      goal_id: m.goal_id ? String(m.goal_id) : null,
+    }));
   } catch {
-    return { total: 0, done: 0 };
+    return [];
   }
 }
 
@@ -101,22 +115,20 @@ export default async function DashboardPage() {
     case "INVESTOR": {
       // Dados extras para o painel do financiador
       const projectIds = projetos.map((p: any) => p.id).filter(Boolean);
-      const [goalsSummary, milestonesSummary, organizacoes] = await Promise.all(
-        [
-          fetchGoalsSummary(projectIds),
-          fetchMilestonesSummary(projectIds),
-          fetchOrganizationsFromProjects(projetos),
-        ]
-      );
+      const [organizacoes, invGoalsList, invMilestonesList] = await Promise.all([
+        fetchOrganizationsFromProjects(projetos),
+        fetchGoalsList(projectIds),
+        fetchMilestonesList(projectIds),
+      ]);
 
       return (
         <DashboardInvestor
           nome={nome}
           projetos={projetos}
           relatorios={relatorios}
-          goalsSummary={goalsSummary}
-          milestonesSummary={milestonesSummary}
           organizacoes={organizacoes}
+          goalsList={invGoalsList}
+          milestonesList={invMilestonesList}
         />
       );
     }
@@ -134,18 +146,21 @@ export default async function DashboardPage() {
     default: {
       // Dados extras para o painel da organização
       const orgProjectIds = projetos.map((p: any) => p.id).filter(Boolean);
-      const [orgGoalsSummary, orgMilestonesSummary] = await Promise.all([
-        fetchGoalsSummary(orgProjectIds),
-        fetchMilestonesSummary(orgProjectIds),
-      ]);
+      const [orgGoalsList, orgMilestonesList, orgOrganizacoes] =
+        await Promise.all([
+          fetchGoalsList(orgProjectIds),
+          fetchMilestonesList(orgProjectIds),
+          fetchOrganizationsFromProjects(projetos),
+        ]);
 
       return (
         <DashboardOrg
           nome={nome}
           projetos={projetos}
           relatorios={relatorios}
-          goalsSummary={orgGoalsSummary}
-          milestonesSummary={orgMilestonesSummary}
+          goalsList={orgGoalsList}
+          milestonesList={orgMilestonesList}
+          organizacoes={orgOrganizacoes}
         />
       );
     }

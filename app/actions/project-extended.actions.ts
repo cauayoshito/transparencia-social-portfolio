@@ -36,6 +36,19 @@ export async function updateProjectExtendedAction(formData: FormData) {
       return go("&error=" + encodeURIComponent("Acesso negado ao projeto."));
     }
 
+    // Item 7: Visão geral editável somente até o envio (rascunho ou devolvido).
+    const projStatus = String((project as any).status ?? "")
+      .trim()
+      .toUpperCase();
+    if (projStatus !== "DRAFT" && projStatus !== "DEVOLVIDO") {
+      return go(
+        "&error=" +
+          encodeURIComponent(
+            "Edição bloqueada: o projeto já foi enviado para análise.",
+          ),
+      );
+    }
+
     // Collect target audience checkboxes
     const targetAudience: string[] = [];
     const audienceOptions = [

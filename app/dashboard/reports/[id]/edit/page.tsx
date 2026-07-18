@@ -13,6 +13,8 @@ import {
 } from "@/app/actions/report.actions";
 import { getReportFinancialData } from "@/services/report-financial.service";
 import ReportFinancialSection from "@/components/reports/ReportFinancialSection";
+import ReportActivitiesSection from "@/components/reports/ReportActivitiesSection";
+import { listReportActivities } from "@/services/report-activities.service";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -114,7 +116,7 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
   const photos: PhotoItem[] = Array.isArray(data?.__assets?.photos)
     ? data.__assets.photos
     : [];
-  const [photosWithUrls, financialData] = await Promise.all([
+  const [photosWithUrls, financialData, activities] = await Promise.all([
     Promise.all(
       photos.map(async (p) => ({
         ...p,
@@ -122,7 +124,13 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
       }))
     ),
     getReportFinancialData(reportId),
+    listReportActivities(reportId).catch(() => []),
   ]);
+
+  const periodYear = Number(String(report.period_start ?? "").slice(0, 4));
+  const defaultYear = Number.isFinite(periodYear) && periodYear > 0
+    ? periodYear
+    : undefined;
 
   return (
     <main className="mx-auto max-w-6xl p-6 space-y-6">
@@ -203,6 +211,14 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
           {decodeURIComponent(searchParams.err)}
         </div>
       )}
+
+      {/* Acompanhamento de atividades (início do relatório) */}
+      <ReportActivitiesSection
+        reportId={reportId}
+        canEdit={canEdit}
+        activities={activities}
+        defaultYear={defaultYear}
+      />
 
       {/* Registro Fotográfico */}
       <section className="rounded-xl border bg-white p-4">

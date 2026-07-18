@@ -77,10 +77,10 @@ export default function ProjectParticipants({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">
-            Participantes do projeto
+            Acompanhamento
           </h2>
           <p className="mt-1 text-sm text-slate-600">
-            Defina quem acompanha este projeto e qual papel cada pessoa assume.
+            Responsáveis pelo acompanhamento do projeto.
           </p>
         </div>
       </div>

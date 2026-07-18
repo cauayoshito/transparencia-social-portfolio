@@ -17,6 +17,11 @@ export type ProjectBudgetItem = {
   project_id: string;
   investment_type: string;
   item_description: string;
+  /** Quantidade de itens. planned_amount = quantity * unit_amount. */
+  quantity: number;
+  /** Valor unitário (R$). planned_amount = quantity * unit_amount. */
+  unit_amount: number;
+  /** Valor total da linha (quantidade x valor unitário). */
   planned_amount: number;
   sort_order: number | null;
   created_at: string;
@@ -115,11 +120,17 @@ export async function upsertProjectBudgetItem(
   const supabase = createClient();
   const db = supabase as any;
 
+  const quantity = item.quantity ?? 1;
+  const unitAmount = item.unit_amount ?? 0;
+
   const payload = {
     project_id: projectId,
     investment_type: item.investment_type,
     item_description: item.item_description,
-    planned_amount: item.planned_amount ?? 0,
+    quantity,
+    unit_amount: unitAmount,
+    // Total sempre derivado de quantidade x valor unitário.
+    planned_amount: quantity * unitAmount,
     sort_order: item.sort_order ?? 0,
     updated_at: new Date().toISOString(),
   };

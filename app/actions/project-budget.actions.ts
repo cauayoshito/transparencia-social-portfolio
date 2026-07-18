@@ -68,6 +68,28 @@ async function requireProjectEditableByUser(projectId: string, userId: string) {
   return project;
 }
 
+/**
+ * Cronograma de repasses só pode ser editado após a APROVAÇÃO do projeto.
+ */
+async function requireProjectApprovedByUser(projectId: string, userId: string) {
+  const project = await getProjectByIdForUser(projectId, userId);
+  if (!project) {
+    throw new Error("Acesso negado ao projeto.");
+  }
+
+  const status = String((project as any).status ?? "")
+    .trim()
+    .toUpperCase();
+
+  if (status !== "APROVADO") {
+    throw new Error(
+      "Cronograma de repasses disponível somente após a aprovação do projeto.",
+    );
+  }
+
+  return project;
+}
+
 // ---------------------------------------------------------------------------
 // Budget items
 // ---------------------------------------------------------------------------
@@ -90,11 +112,13 @@ export async function saveProjectBudgetItemAction(formData: FormData) {
       );
     }
 
+    const quantity = parseNum(formData.get("quantity"));
     await upsertProjectBudgetItem(projectId, {
       id: safeText(formData.get("item_id")) || undefined,
       investment_type: investmentType,
       item_description: itemDescription,
-      planned_amount: parseNum(formData.get("planned_amount")),
+      quantity: quantity > 0 ? quantity : 1,
+      unit_amount: parseNum(formData.get("unit_amount")),
     });
 
     revalidatePath(`/dashboard/projects/${projectId}`);
@@ -147,7 +171,7 @@ export async function saveProjectPlannedTransferAction(formData: FormData) {
 
   try {
     const user = await requireUser();
-    await requireProjectEditableByUser(projectId, (user as any).id);
+    await requireProjectApprovedByUser(projectId, (user as any).id);
 
     const referenceDate = safeText(formData.get("reference_date"));
     if (!referenceDate) {
@@ -189,7 +213,7 @@ export async function deleteProjectPlannedTransferAction(formData: FormData) {
 
   try {
     const user = await requireUser();
-    await requireProjectEditableByUser(projectId, (user as any).id);
+    await requireProjectApprovedByUser(projectId, (user as any).id);
 
     if (!transferId) {
       return go("?err=" + encodeURIComponent("Repasse inválido."));

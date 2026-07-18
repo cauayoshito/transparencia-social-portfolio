@@ -238,7 +238,9 @@ export async function createReportAction(formData: FormData) {
   revalidatePath(`/dashboard/projects/${project.id}`);
   revalidatePath(`/dashboard/reports`);
 
-  redirect(`/dashboard/reports/${report.id}`);
+  // Relatório recém-criado já abre na tela de preenchimento (não no detalhe
+  // somente-leitura) — o usuário não precisa clicar em "Digitar relatório".
+  redirect(`/dashboard/reports/${report.id}/edit`);
 }
 
 // =========================

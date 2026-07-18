@@ -8,8 +8,8 @@ import {
   deleteProjectMilestoneAction,
   updateProjectMilestoneAction,
 } from "@/app/actions/project-milestones.actions";
-import { saveProjectPlanAction } from "@/app/actions/project-plan.actions";
 import { normalizeProjectPlanData } from "@/lib/project-plan";
+import ProjectPlanFields from "@/components/projects/ProjectPlanFields";
 import {
   listProjectGoals,
   type ProjectGoalRow,
@@ -97,23 +97,12 @@ function formatMilestonePeriod(
   return "Periodo nao definido";
 }
 
-function getNextSortOrder(
-  items: Array<{ sort_order: number | null | undefined }>
-) {
-  if (items.length === 0) return 0;
-
-  return (
-    items.reduce(
-      (highest, item) => Math.max(highest, Number(item.sort_order ?? 0)),
-      -1
-    ) + 1
-  );
-}
-
 export default async function ProjectPlan({
   project,
+  readOnly = false,
 }: {
   project: ProjectLike;
+  readOnly?: boolean;
 }) {
   const plan = normalizeProjectPlanData(project.plan_data);
 
@@ -143,8 +132,6 @@ export default async function ProjectPlan({
       : null;
 
   const goalTitleById = new Map(goals.map((goal) => [goal.id, goal.title]));
-  const suggestedGoalSortOrder = getNextSortOrder(goals);
-  const suggestedMilestoneSortOrder = getNextSortOrder(milestones);
 
   return (
     <section className="space-y-4 sm:space-y-6">
@@ -154,7 +141,8 @@ export default async function ProjectPlan({
             Plano do projeto
           </h2>
           <p className="mt-1 text-sm text-slate-600">
-            Registre o objetivo geral que orienta esta fase do projeto.
+            Registre o objetivo/descrição e a metodologia que orientam esta fase
+            do projeto.
           </p>
         </div>
 
@@ -165,34 +153,12 @@ export default async function ProjectPlan({
           </span>
         </div>
 
-        <form action={saveProjectPlanAction} className="space-y-4">
-          <input type="hidden" name="project_id" value={project.id} />
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-900">
-              Objetivo geral
-            </label>
-            <textarea
-              name="objective"
-              defaultValue={plan.objective_general}
-              className="min-h-[160px] w-full resize-y rounded-lg border border-slate-200 bg-white p-3 text-sm outline-none focus:border-slate-300"
-              placeholder="Descreva com clareza o objetivo principal do projeto."
-            />
-            <p className="mt-2 text-xs text-slate-500">
-              Use este campo para registrar a direcao central do projeto nesta
-              fase.
-            </p>
-          </div>
-
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 sm:w-auto"
-            >
-              Salvar plano
-            </button>
-          </div>
-        </form>
+        <ProjectPlanFields
+          projectId={project.id}
+          initialObjective={plan.objective_general}
+          initialMethodology={plan.methodology}
+          readOnly={readOnly}
+        />
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -287,20 +253,6 @@ export default async function ProjectPlan({
                     name="target_value"
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-300"
                     placeholder="Ex: 500 participantes"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-900">
-                    Ordenacao
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    name="sort_order"
-                    defaultValue={suggestedGoalSortOrder}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-300"
                   />
                 </div>
 
@@ -440,19 +392,11 @@ export default async function ProjectPlan({
                           />
                         </div>
 
-                        <div>
-                          <label className="mb-2 block text-sm font-medium text-slate-900">
-                            Ordenacao
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="1"
-                            name="sort_order"
-                            defaultValue={goal.sort_order}
-                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-300"
-                          />
-                        </div>
+                        <input
+                          type="hidden"
+                          name="sort_order"
+                          defaultValue={goal.sort_order ?? 0}
+                        />
 
                         <div className="sm:col-span-2">
                           <label className="mb-2 block text-sm font-medium text-slate-900">
@@ -519,6 +463,7 @@ export default async function ProjectPlan({
             </div>
           )}
 
+          {!readOnly && (
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="mb-4">
               <h4 className="text-sm font-semibold text-slate-900">
@@ -610,20 +555,6 @@ export default async function ProjectPlan({
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-900">
-                    Ordenacao
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    name="sort_order"
-                    defaultValue={suggestedMilestoneSortOrder}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-300"
-                  />
-                </div>
-
                 <div className="sm:col-span-2">
                   <label className="mb-2 block text-sm font-medium text-slate-900">
                     Descricao
@@ -647,6 +578,7 @@ export default async function ProjectPlan({
               </div>
             </form>
           </div>
+          )}
 
           <div className="space-y-4">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
@@ -661,8 +593,9 @@ export default async function ProjectPlan({
 
             {milestones.length === 0 ? (
               <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-600">
-                Nenhum marco cadastrado ainda. Use o formulario acima para
-                montar o cronograma real deste projeto.
+                {readOnly
+                  ? "Nenhum marco cadastrado no cronograma deste projeto."
+                  : "Nenhum marco cadastrado ainda. Use o formulario acima para montar o cronograma real deste projeto."}
               </div>
             ) : (
               <div className="space-y-4">
@@ -671,6 +604,35 @@ export default async function ProjectPlan({
                     ? goalTitleById.get(milestone.goal_id) ??
                       "Meta indisponivel"
                     : null;
+
+                  // Cronograma em modo leitura/relatório: exibir apenas
+                  // Título, Meta e Descrição (sem período, status ou ordenação).
+                  if (readOnly) {
+                    return (
+                      <article
+                        key={milestone.id}
+                        className="rounded-xl border border-slate-200 bg-white p-4"
+                      >
+                        <h5 className="break-words text-sm font-semibold text-slate-900">
+                          {milestone.title}
+                        </h5>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {linkedGoalTitle
+                            ? `Meta: ${linkedGoalTitle}`
+                            : "Sem meta vinculada"}
+                        </p>
+                        <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
+                          {milestone.description?.trim() ? (
+                            milestone.description
+                          ) : (
+                            <span className="italic text-slate-400">
+                              Sem descrição
+                            </span>
+                          )}
+                        </p>
+                      </article>
+                    );
+                  }
 
                   return (
                     <article
@@ -787,19 +749,11 @@ export default async function ProjectPlan({
                             />
                           </div>
 
-                          <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-900">
-                              Ordenacao
-                            </label>
-                            <input
-                              type="number"
-                              min="0"
-                              step="1"
-                              name="sort_order"
-                              defaultValue={milestone.sort_order}
-                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-300"
-                            />
-                          </div>
+                          <input
+                            type="hidden"
+                            name="sort_order"
+                            defaultValue={milestone.sort_order ?? 0}
+                          />
 
                           <div className="sm:col-span-2">
                             <label className="mb-2 block text-sm font-medium text-slate-900">
