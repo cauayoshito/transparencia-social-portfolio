@@ -113,12 +113,28 @@ export async function saveProjectBudgetItemAction(formData: FormData) {
     }
 
     const quantity = parseNum(formData.get("quantity"));
+
+    // Detalhes opcionais por bloco (spec Recursos Públicos):
+    // RH (formação/função/horas/vínculo) e justificativa de materiais.
+    const details: Record<string, string> = {};
+    for (const key of [
+      "rh_formacao",
+      "rh_funcao",
+      "rh_horas",
+      "rh_vinculo",
+      "justificativa",
+    ]) {
+      const v = safeText(formData.get(key));
+      if (v) details[key] = v;
+    }
+
     await upsertProjectBudgetItem(projectId, {
       id: safeText(formData.get("item_id")) || undefined,
       investment_type: investmentType,
       item_description: itemDescription,
       quantity: quantity > 0 ? quantity : 1,
       unit_amount: parseNum(formData.get("unit_amount")),
+      details: Object.keys(details).length > 0 ? details : null,
     });
 
     revalidatePath(`/dashboard/projects/${projectId}`);

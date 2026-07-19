@@ -288,6 +288,17 @@ export default async function ProjectPlan({
                   />
                 </div>
 
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-900">
+                    Meio de verificacao
+                  </label>
+                  <input
+                    name="verification"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-300"
+                    placeholder="Ex: lista de presenca, relatorio fotografico"
+                  />
+                </div>
+
                 <div className="sm:col-span-2">
                   <label className="mb-2 block text-sm font-medium text-slate-900">
                     Descricao
@@ -420,6 +431,17 @@ export default async function ProjectPlan({
                           <input
                             name="target_value"
                             defaultValue={goal.target_value ?? ""}
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-300"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-slate-900">
+                            Meio de verificacao
+                          </label>
+                          <input
+                            name="verification"
+                            defaultValue={(goal as any).verification ?? ""}
                             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-300"
                           />
                         </div>

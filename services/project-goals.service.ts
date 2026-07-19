@@ -10,6 +10,7 @@ export type CreateProjectGoalInput = {
   description?: string | null;
   indicator?: string | null;
   target_value?: string | null;
+  verification?: string | null;
   due_date?: string | null;
   status?: string | null;
   sort_order?: number | string | null;
@@ -20,6 +21,7 @@ export type UpdateProjectGoalInput = {
   description?: string | null;
   indicator?: string | null;
   target_value?: string | null;
+  verification?: string | null;
   due_date?: string | null;
   status?: string | null;
   sort_order?: number | string | null;
@@ -220,6 +222,7 @@ export async function createProjectGoal(
       description: cleanNullable(payload.description),
       indicator: cleanNullable(payload.indicator),
       target_value: cleanNullable(payload.target_value),
+      verification: cleanNullable(payload.verification),
       due_date: cleanDate(payload.due_date),
       status,
       sort_order: sortOrder,
@@ -281,6 +284,7 @@ export async function updateProjectGoal(
       description: cleanNullable(payload.description),
       indicator: cleanNullable(payload.indicator),
       target_value: cleanNullable(payload.target_value),
+      verification: cleanNullable(payload.verification),
       due_date: cleanDate(payload.due_date),
       status,
       sort_order: parsedSortOrder ?? 0,

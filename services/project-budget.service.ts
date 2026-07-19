@@ -23,6 +23,9 @@ export type ProjectBudgetItem = {
   unit_amount: number;
   /** Valor total da linha (quantidade x valor unitário). */
   planned_amount: number;
+  /** Detalhes por bloco (spec Recursos Públicos): rh_formacao, rh_funcao,
+   *  rh_horas, rh_vinculo (PF/PJ), justificativa. */
+  details: Record<string, string> | null;
   sort_order: number | null;
   created_at: string;
   updated_at: string;
@@ -131,6 +134,7 @@ export async function upsertProjectBudgetItem(
     unit_amount: unitAmount,
     // Total sempre derivado de quantidade x valor unitário.
     planned_amount: quantity * unitAmount,
+    details: item.details ?? null,
     sort_order: item.sort_order ?? 0,
     updated_at: new Date().toISOString(),
   };

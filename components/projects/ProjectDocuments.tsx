@@ -51,7 +51,28 @@ function formatBytes(bytes?: number | null) {
   return `${b.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
-export default function ProjectDocuments({ projectId }: Props) {
+// Documentação exigida por tipo de projeto (formulários do cliente).
+// Cada item traz palavras-chave para marcar como enviado quando um documento
+// com descrição/tipo compatível existir.
+const REQUIRED_DOCS_BY_TYPE: Record<string, { label: string; keywords: string[] }[]> = {
+  RECURSOS_PUBLICOS: [
+    { label: "Certidão Negativa de Débitos Federal", keywords: ["federal"] },
+    { label: "Certidão Negativa de Débitos Estadual", keywords: ["estadual"] },
+    { label: "Certidão Negativa de Débitos Municipal", keywords: ["municipal"] },
+    { label: "Certificado de regularidade do FGTS", keywords: ["fgts"] },
+    { label: "Certidão Negativa de Débitos Trabalhistas", keywords: ["trabalhista"] },
+    { label: "Plano de Trabalho", keywords: ["plano de trabalho"] },
+    { label: "Atestado de veracidade dos dados", keywords: ["veracidade", "atestado"] },
+  ],
+  RECURSOS_PROPRIOS: [
+    { label: "Estatuto Social", keywords: ["estatuto"] },
+    { label: "Ata de eleição da diretoria", keywords: ["ata"] },
+    { label: "Cartão CNPJ", keywords: ["cnpj"] },
+    { label: "Comprovante bancário da instituição", keywords: ["bancário", "bancario", "banco"] },
+  ],
+};
+
+export default function ProjectDocuments({ projectId, projectType }: Props) {
   const [docs, setDocs] = useState<DocRow[]>([]);
   const [docType, setDocType] = useState<string>("CNPJ");
   const [docDescription, setDocDescription] = useState<string>("");
@@ -67,6 +88,18 @@ export default function ProjectDocuments({ projectId }: Props) {
       "Certidões e declarações",
     ],
     []
+  );
+
+  const typeKey = String(projectType ?? "").trim().toUpperCase();
+  const requiredDocs = REQUIRED_DOCS_BY_TYPE[typeKey] ?? null;
+  const docHaystack = useMemo(
+    () =>
+      docs
+        .map((d) =>
+          `${d.doc_type ?? ""} ${(d as any).doc_description ?? ""} ${(d as any).file_name ?? ""}`.toLowerCase()
+        )
+        .join(" | "),
+    [docs]
   );
 
   async function refresh() {
@@ -180,6 +213,38 @@ export default function ProjectDocuments({ projectId }: Props) {
             <li key={item}>{item}</li>
           ))}
         </ul>
+
+        {/* Checklist de documentos exigidos por tipo (formulários do cliente) */}
+        {requiredDocs && (
+          <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <p className="mb-2 text-sm font-semibold text-blue-900">
+              Documentação exigida —{" "}
+              {typeKey === "RECURSOS_PUBLICOS"
+                ? "Recursos Públicos"
+                : "Recursos Próprios"}
+            </p>
+            <ul className="space-y-1 text-sm">
+              {requiredDocs.map((req) => {
+                const sent = req.keywords.some((kw) =>
+                  docHaystack.includes(kw.toLowerCase())
+                );
+                return (
+                  <li
+                    key={req.label}
+                    className={sent ? "text-emerald-700" : "text-blue-800"}
+                  >
+                    {sent ? "✓" : "○"} {req.label}
+                    {sent ? " — enviado" : " — pendente"}
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="mt-2 text-xs text-blue-700">
+              Use a descrição do documento no envio (ex: &quot;Certidão negativa
+              federal&quot;) para marcar o item automaticamente.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">

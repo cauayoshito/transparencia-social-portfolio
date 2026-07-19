@@ -181,11 +181,24 @@ export default function ProjectFinancial({
                   const unit = Number(
                     (item as any).unit_amount ?? Number(item.planned_amount) / qty,
                   );
+                  const details = ((item as any).details ?? {}) as Record<string, string>;
+                  const detailParts = [
+                    details.rh_formacao && `Formação: ${details.rh_formacao}`,
+                    details.rh_funcao && `Função: ${details.rh_funcao}`,
+                    details.rh_horas && `Horas: ${details.rh_horas}`,
+                    details.rh_vinculo && `Vínculo: ${details.rh_vinculo}`,
+                    details.justificativa && `Justificativa: ${details.justificativa}`,
+                  ].filter(Boolean);
                   return (
                   <tr key={item.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2">{item.investment_type}</td>
-                    <td className="max-w-[260px] truncate px-3 py-2">
-                      {item.item_description}
+                    <td className="max-w-[260px] px-3 py-2">
+                      <span className="block truncate">{item.item_description}</span>
+                      {detailParts.length > 0 && (
+                        <span className="block text-[10px] text-slate-500">
+                          {detailParts.join(" · ")}
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-right">{qty}</td>
                     <td className="px-3 py-2 text-right">
@@ -293,8 +306,73 @@ export default function ProjectFinancial({
 
               <p className="text-xs text-slate-500 sm:col-span-6">
                 O <strong>valor total</strong> de cada linha é calculado
-                automaticamente: quantidade × valor unitário.
+                automaticamente: quantidade × valor unitário. Para{" "}
+                <strong>Recursos Humanos</strong>, use quantidade = meses e
+                valor unitário = valor mensal.
               </p>
+
+              {/* Detalhes opcionais (spec Recursos Públicos) */}
+              <details className="sm:col-span-6 rounded border border-slate-200 bg-white p-3">
+                <summary className="cursor-pointer text-xs font-medium text-slate-700">
+                  Detalhes do item (opcional) — Recursos Humanos / justificativa
+                  de materiais
+                </summary>
+                <div className="mt-3 grid gap-3 sm:grid-cols-4">
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-600">
+                      Formação profissional (RH)
+                    </label>
+                    <input
+                      name="rh_formacao"
+                      placeholder="Ex: Pedagogia"
+                      className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-600">
+                      Função no projeto (RH)
+                    </label>
+                    <input
+                      name="rh_funcao"
+                      placeholder="Ex: Educador social"
+                      className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-600">
+                      Horas de dedicação (RH)
+                    </label>
+                    <input
+                      name="rh_horas"
+                      placeholder="Ex: 20h semanais"
+                      className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-600">
+                      Vínculo (RH)
+                    </label>
+                    <select
+                      name="rh_vinculo"
+                      className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                    >
+                      <option value="">Selecione…</option>
+                      <option value="Pessoa física">Pessoa física</option>
+                      <option value="Pessoa jurídica">Pessoa jurídica</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-4">
+                    <label className="mb-1 block text-xs text-slate-600">
+                      Justificativa (materiais de consumo/permanentes)
+                    </label>
+                    <input
+                      name="justificativa"
+                      placeholder="Por que este item é necessário"
+                      className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+              </details>
 
               <div className="flex justify-end sm:col-span-6">
                 <button className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
