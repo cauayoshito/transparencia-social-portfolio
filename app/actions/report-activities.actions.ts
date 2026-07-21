@@ -212,6 +212,53 @@ export async function saveCounterpartReviewAction(formData: FormData) {
   }
 }
 
+/**
+ * Avaliação de um marco do cronograma no relatório (execução + comentário).
+ * O relatório puxa os marcos do projeto; a organização só avalia.
+ */
+export async function saveActivityReviewAction(formData: FormData) {
+  const reportId = safeText(formData.get("report_id"));
+  const milestoneId = safeText(formData.get("milestone_id"));
+  const go = (q: string) => redirect(editUrl(reportId, q));
+
+  try {
+    const user = await requireUser();
+    await requireReportDraftAccess(reportId, (user as any).id);
+
+    if (!milestoneId) {
+      return go(`?err=${encodeURIComponent("Atividade inválida.")}`);
+    }
+
+    const supabase = createClient();
+    const { error } = await (supabase as any)
+      .from("report_activity_reviews")
+      .upsert(
+        {
+          report_id: reportId,
+          milestone_id: milestoneId,
+          execution: safeText(formData.get("execution")) || null,
+          evaluation: safeText(formData.get("evaluation")).slice(0, 500) || null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "report_id,milestone_id" },
+      );
+
+    if (error) {
+      throw new Error(`Falha ao salvar avaliação: ${error.message}`);
+    }
+
+    revalidatePath(editUrl(reportId));
+    return go("?saved=1");
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return go(
+      `?err=${encodeURIComponent(
+        err instanceof Error ? err.message : "Erro ao salvar avaliação.",
+      )}`,
+    );
+  }
+}
+
 export async function deleteReportActivityAction(formData: FormData) {
   const reportId = safeText(formData.get("report_id"));
   const activityId = safeText(formData.get("activity_id"));

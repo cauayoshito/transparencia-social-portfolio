@@ -16,7 +16,7 @@ import {
 } from "@/services/reports.service";
 import { getProjectByIdForUser } from "@/services/projects.service";
 import { getReportFinancialData } from "@/services/report-financial.service";
-import { listReportActivities } from "@/services/report-activities.service";
+import { listProjectMilestones } from "@/services/project-milestones.service";
 import { listProjectCounterparts } from "@/services/project-schedule.service";
 import { createClient } from "@/lib/supabase/server";
 
@@ -122,13 +122,13 @@ export async function GET(
     String((projectFull as any).project_type ?? "").toUpperCase() ===
     "INCENTIVADO";
 
-  const [organization, financialData, activities, templateData, counterparts] =
+  const [organization, financialData, milestones, templateData, counterparts] =
     await Promise.all([
       getOrganizationByIdForUser((projectFull as any).organization_id).catch(
         () => null,
       ),
       getReportFinancialData(reportId),
-      listReportActivities(reportId).catch(() => []),
+      listProjectMilestones(String(report.project_id), user.id).catch(() => []),
       getReportTemplateForProjectType(
         (projectFull as any).project_type,
       ).catch(() => null),
@@ -137,21 +137,25 @@ export async function GET(
         : Promise.resolve([]),
     ]);
 
-  let counterpartReviews: {
-    counterpart_id: string;
-    execution: string | null;
-    comment: string | null;
-  }[] = [];
-  if (isIncentivado && counterparts.length > 0) {
-    const supabaseRev = createClient();
-    const { data: revData } = await (supabaseRev as any)
-      .from("report_counterpart_reviews")
-      .select("counterpart_id, execution, comment")
-      .eq("report_id", reportId);
-    counterpartReviews = revData ?? [];
-  }
-  const reviewByCounterpart = new Map(
-    counterpartReviews.map((r) => [r.counterpart_id, r]),
+  const supabaseRev = createClient();
+  const [{ data: actRevData }, { data: cpRevData }] = await Promise.all([
+    (supabaseRev as any)
+      .from("report_activity_reviews")
+      .select("milestone_id, execution, evaluation")
+      .eq("report_id", reportId),
+    isIncentivado
+      ? (supabaseRev as any)
+          .from("report_counterpart_reviews")
+          .select("counterpart_id, execution, comment")
+          .eq("report_id", reportId)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const reviewByMilestone = new Map<string, any>(
+    (actRevData ?? []).map((r: any) => [r.milestone_id, r]),
+  );
+  const counterpartReviews = cpRevData ?? [];
+  const reviewByCounterpart = new Map<string, any>(
+    counterpartReviews.map((r: any) => [r.counterpart_id, r]),
   );
 
   const p = projectFull as any;
@@ -259,18 +263,27 @@ export async function GET(
     ]);
   }
 
-  // ── Atividades ──
+  // ── Atividades (puxadas do cronograma do projeto) ──
+  const fmtMonth = (v: string | null) => {
+    if (!v) return "-";
+    const d = new Date(v);
+    return Number.isNaN(d.getTime())
+      ? "-"
+      : new Intl.DateTimeFormat("pt-BR", { month: "short", year: "numeric" }).format(d);
+  };
   addSheet(wb, "Atividades", [
-    ["Mês", "Ano", "Atividade", "Execução", "Avaliação"],
-    ...(activities.length
-      ? activities.map((a) => [
-          text(a.activity_month, "-"),
-          a.activity_year ?? "-",
-          text(a.activity),
-          text(a.execution, "-"),
-          text(a.evaluation, "-"),
-        ])
-      : [["Nenhuma atividade cadastrada.", "", "", "", ""]]),
+    ["Período", "Atividade", "Execução", "Avaliação"],
+    ...(milestones.length
+      ? milestones.map((m: any) => {
+          const rev = reviewByMilestone.get(m.id) as any;
+          return [
+            fmtMonth(m.starts_at),
+            text(m.title),
+            text(rev?.execution, "-"),
+            text(rev?.evaluation, "-"),
+          ];
+        })
+      : [["Nenhuma atividade no cronograma do projeto.", "", "", ""]]),
   ]);
 
   // ── Financeiro ──

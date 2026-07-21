@@ -22,7 +22,7 @@ import {
 } from "@/services/reports.service";
 import { getProjectByIdForUser } from "@/services/projects.service";
 import { getReportFinancialData } from "@/services/report-financial.service";
-import { listReportActivities } from "@/services/report-activities.service";
+import { listProjectMilestones } from "@/services/project-milestones.service";
 import { listProjectCounterparts } from "@/services/project-schedule.service";
 import { createClient } from "@/lib/supabase/server";
 import PrintReportButton from "@/components/reports/PrintReportButton";
@@ -119,13 +119,13 @@ export default async function ReportPrintPage({ params }: Props) {
     String((projectFull as any).project_type ?? "").toUpperCase() ===
     "INCENTIVADO";
 
-  const [organization, financialData, activities, templateData, counterparts] =
+  const [organization, financialData, milestones, templateData, counterparts] =
     await Promise.all([
       getOrganizationByIdForUser((projectFull as any).organization_id).catch(
         () => null,
       ),
       getReportFinancialData(reportId),
-      listReportActivities(reportId).catch(() => []),
+      listProjectMilestones(String(report.project_id), user.id).catch(() => []),
       getReportTemplateForProjectType(
         (projectFull as any).project_type,
       ).catch(() => null),
@@ -134,23 +134,34 @@ export default async function ReportPrintPage({ params }: Props) {
         : Promise.resolve([]),
     ]);
 
-  // Avaliações de contrapartida deste relatório
-  let counterpartReviews: {
-    counterpart_id: string;
-    execution: string | null;
-    comment: string | null;
-  }[] = [];
-  if (isIncentivado && counterparts.length > 0) {
-    const supabaseRev = createClient();
-    const { data: revData } = await (supabaseRev as any)
-      .from("report_counterpart_reviews")
-      .select("counterpart_id, execution, comment")
-      .eq("report_id", reportId);
-    counterpartReviews = revData ?? [];
-  }
-  const reviewByCounterpart = new Map(
-    counterpartReviews.map((r) => [r.counterpart_id, r]),
+  // Avaliações deste relatório (atividades + contrapartidas)
+  const supabaseRev = createClient();
+  const [{ data: actRevData }, { data: cpRevData }] = await Promise.all([
+    (supabaseRev as any)
+      .from("report_activity_reviews")
+      .select("milestone_id, execution, evaluation")
+      .eq("report_id", reportId),
+    isIncentivado
+      ? (supabaseRev as any)
+          .from("report_counterpart_reviews")
+          .select("counterpart_id, execution, comment")
+          .eq("report_id", reportId)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const reviewByMilestone = new Map<string, any>(
+    (actRevData ?? []).map((r: any) => [r.milestone_id, r]),
   );
+  const reviewByCounterpart = new Map<string, any>(
+    (cpRevData ?? []).map((r: any) => [r.counterpart_id, r]),
+  );
+
+  const fmtMonth = (v: string | null) => {
+    if (!v) return "-";
+    const d = new Date(v);
+    return Number.isNaN(d.getTime())
+      ? "-"
+      : new Intl.DateTimeFormat("pt-BR", { month: "short", year: "numeric" }).format(d);
+  };
 
   const data = (currentVersion?.data as any) ?? {};
   const photos: PhotoItem[] = Array.isArray(data?.__assets?.photos)
@@ -305,32 +316,33 @@ export default async function ReportPrintPage({ params }: Props) {
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="border-b border-slate-300 bg-slate-100 font-semibold text-slate-700">
-              <th className="px-3 py-2">Mês</th>
-              <th className="px-3 py-2">Ano</th>
+              <th className="px-3 py-2">Período</th>
               <th className="px-3 py-2">Atividade</th>
               <th className="px-3 py-2">Execução</th>
               <th className="px-3 py-2">Avaliação</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {activities.length === 0 ? (
+            {milestones.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-3 py-4 text-center text-slate-500">
-                  Nenhuma atividade cadastrada.
+                <td colSpan={4} className="px-3 py-4 text-center text-slate-500">
+                  Nenhuma atividade no cronograma do projeto.
                 </td>
               </tr>
             ) : (
-              activities.map((a) => (
-                <tr key={a.id} className="align-top">
-                  <td className="px-3 py-2">{a.activity_month ?? "-"}</td>
-                  <td className="px-3 py-2">{a.activity_year ?? "-"}</td>
-                  <td className="whitespace-pre-wrap px-3 py-2">{a.activity}</td>
-                  <td className="px-3 py-2">{a.execution ?? "-"}</td>
-                  <td className="whitespace-pre-wrap px-3 py-2">
-                    {a.evaluation ?? "-"}
-                  </td>
-                </tr>
-              ))
+              milestones.map((m: any) => {
+                const rev = reviewByMilestone.get(m.id) as any;
+                return (
+                  <tr key={m.id} className="align-top">
+                    <td className="px-3 py-2">{fmtMonth(m.starts_at)}</td>
+                    <td className="whitespace-pre-wrap px-3 py-2">{m.title}</td>
+                    <td className="px-3 py-2">{rev?.execution ?? "-"}</td>
+                    <td className="whitespace-pre-wrap px-3 py-2">
+                      {rev?.evaluation ?? "-"}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

@@ -15,8 +15,8 @@ import { getReportFinancialData } from "@/services/report-financial.service";
 import ReportFinancialSection from "@/components/reports/ReportFinancialSection";
 import ReportActivitiesSection from "@/components/reports/ReportActivitiesSection";
 import ReportCounterpartsSection from "@/components/reports/ReportCounterpartsSection";
-import { listReportActivities } from "@/services/report-activities.service";
 import { listProjectCounterparts } from "@/services/project-schedule.service";
+import { listProjectMilestones } from "@/services/project-milestones.service";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -122,7 +122,7 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
     String((projectFull as any).project_type ?? "").toUpperCase() ===
     "INCENTIVADO";
 
-  const [photosWithUrls, financialData, activities, counterparts] =
+  const [photosWithUrls, financialData, milestones, counterparts] =
     await Promise.all([
       Promise.all(
         photos.map(async (p) => ({
@@ -131,22 +131,28 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
         }))
       ),
       getReportFinancialData(reportId),
-      listReportActivities(reportId).catch(() => []),
+      listProjectMilestones(String(report.project_id), user.id).catch(() => []),
       isIncentivado
         ? listProjectCounterparts(String(report.project_id)).catch(() => [])
         : Promise.resolve([]),
     ]);
 
-  // Avaliações de contrapartida já registradas neste relatório
-  let counterpartReviews: any[] = [];
-  if (isIncentivado && counterparts.length > 0) {
-    const supabase2 = createClient();
-    const { data: revData } = await (supabase2 as any)
-      .from("report_counterpart_reviews")
-      .select("counterpart_id, execution, comment")
-      .eq("report_id", reportId);
-    counterpartReviews = revData ?? [];
-  }
+  // Avaliações já registradas neste relatório (atividades + contrapartidas)
+  const supabaseRev = createClient();
+  const [{ data: activityRevData }, { data: cpRevData }] = await Promise.all([
+    (supabaseRev as any)
+      .from("report_activity_reviews")
+      .select("milestone_id, execution, evaluation")
+      .eq("report_id", reportId),
+    isIncentivado
+      ? (supabaseRev as any)
+          .from("report_counterpart_reviews")
+          .select("counterpart_id, execution, comment")
+          .eq("report_id", reportId)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const activityReviews = activityRevData ?? [];
+  const counterpartReviews = cpRevData ?? [];
 
   const periodYear = Number(String(report.period_start ?? "").slice(0, 4));
   const defaultYear = Number.isFinite(periodYear) && periodYear > 0
@@ -252,8 +258,8 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
       <ReportActivitiesSection
         reportId={reportId}
         canEdit={canEdit}
-        activities={activities}
-        defaultYear={defaultYear}
+        milestones={milestones as any}
+        reviews={activityReviews as any}
       />
 
       {/* Contrapartidas (somente projetos incentivados) */}
