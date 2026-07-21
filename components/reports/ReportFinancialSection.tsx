@@ -9,7 +9,7 @@
  */
 
 import {
-  saveFinancialItemAction,
+  saveBudgetExecutionAction,
   deleteFinancialItemAction,
   saveReallocationAction,
   deleteReallocationAction,
@@ -27,10 +27,19 @@ import type {
   BankStatement,
 } from "@/services/report-financial.service";
 
+type BudgetItemLite = {
+  id: string;
+  investment_type: string;
+  item_description: string;
+  planned_amount: number;
+};
+
 type Props = {
   reportId: string;
   canEdit: boolean;
   items: FinancialItem[];
+  /** Itens do orçamento previsto do projeto (fonte das linhas). */
+  budgetItems: BudgetItemLite[];
   summary: FinancialSummary | null;
   reallocations: Reallocation[];
   receipts: Receipt[];
@@ -70,11 +79,18 @@ export default function ReportFinancialSection({
   reportId,
   canEdit,
   items,
+  budgetItems,
   summary,
   reallocations,
   receipts,
   bankStatements,
 }: Props) {
+  // Gasto já lançado por item de orçamento (report_financial_items vinculado).
+  const spentByBudget = new Map<string, FinancialItem>();
+  for (const it of items) {
+    const bid = (it as any).budget_item_id;
+    if (bid) spentByBudget.set(String(bid), it);
+  }
   return (
     <div className="space-y-8">
       {/* ============================================================ */}
@@ -85,56 +101,72 @@ export default function ReportFinancialSection({
           Relatório financeiro
 </div>
         <p className="px-4 pt-3 text-xs text-slate-600">
-          (1) Orçamento previsto, (2) Gasto total, (3) Remanejados Total, (4) Saldo anterior,
-          (5) Gastos deste relatório, (6) Remanejamentos deste relatório
+          Os itens vêm do <strong>Orçamento previsto do projeto</strong>. Lance
+          o <strong>gasto no período</strong> de cada item; o disponível é
+          calculado automaticamente.
         </p>
 
-        {/* Tabela de itens */}
+        {/* Itens puxados do orçamento do projeto */}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left text-xs">
+          <table className="w-full min-w-[760px] text-left text-xs">
             <thead>
               <tr className="border-b border-slate-200 bg-blue-50 text-xs font-semibold text-slate-700">
                 <th className="px-3 py-2">Tipo</th>
                 <th className="px-3 py-2">Item</th>
-                <th className="px-3 py-2 text-right">Orçamento (1)</th>
-                <th className="px-3 py-2 text-right">Gasto total (2)</th>
-                <th className="px-3 py-2 text-right">Remanej. (3)</th>
-                <th className="px-3 py-2 text-right">Saldo ant. (4)</th>
-                <th className="px-3 py-2 text-right">Gastos (5)</th>
-                <th className="px-3 py-2 text-right">Remanej. (6)</th>
-                <th className="px-3 py-2 text-right">Saldo Atual</th>
-                {canEdit && <th className="px-3 py-2 w-16">Ações</th>}
+                <th className="px-3 py-2 text-right">Orçamento previsto</th>
+                <th className="px-3 py-2 text-right">Gasto no período</th>
+                <th className="px-3 py-2 text-right">Disponível</th>
+                {canEdit && <th className="px-3 py-2 w-24">Ação</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {items.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50">
-                  <td className="px-3 py-2">{item.investment_type}</td>
-                  <td className="px-3 py-2 max-w-[200px] truncate">{item.item_description}</td>
-                  <td className="px-3 py-2 text-right">{formatCurrency(item.budget_planned)}</td>
-                  <td className="px-3 py-2 text-right">{formatCurrency(item.total_spent)}</td>
-                  <td className="px-3 py-2 text-right">{formatCurrency(item.total_reallocated)}</td>
-                  <td className="px-3 py-2 text-right">{formatCurrency(item.previous_balance)}</td>
-                  <td className="px-3 py-2 text-right">{formatCurrency(item.period_expenses)}</td>
-                  <td className="px-3 py-2 text-right">{formatCurrency(item.period_realloc)}</td>
-                  <td className="px-3 py-2 text-right font-medium">{formatCurrency(item.current_balance)}</td>
-                  {canEdit && (
-                    <td className="px-3 py-2">
-                      <form action={deleteFinancialItemAction}>
-                        <input type="hidden" name="report_id" value={reportId} />
-                        <input type="hidden" name="item_id" value={item.id} />
-                        <button className="text-rose-600 hover:underline">Excluir</button>
-                      </form>
-                    </td>
-                  )}
-                </tr>
-              ))}
-              {items.length === 0 && (
+              {budgetItems.length === 0 ? (
                 <tr>
-                  <td colSpan={canEdit ? 10 : 9} className="px-3 py-6 text-center text-slate-500">
-                    Nenhum item financeiro cadastrado.
+                  <td colSpan={canEdit ? 6 : 5} className="px-3 py-6 text-center text-slate-500">
+                    Nenhum item no orçamento previsto do projeto. Cadastre na aba
+                    Financeiro do projeto.
                   </td>
                 </tr>
+              ) : (
+                budgetItems.map((b) => {
+                  const spent = spentByBudget.get(b.id);
+                  const gasto = Number(spent?.period_expenses ?? 0);
+                  const disponivel = Number(b.planned_amount) - gasto;
+                  return (
+                    <tr key={b.id} className="align-middle hover:bg-slate-50">
+                      <td className="px-3 py-2">{b.investment_type}</td>
+                      <td className="max-w-[200px] px-3 py-2">{b.item_description}</td>
+                      <td className="px-3 py-2 text-right">{formatCurrency(b.planned_amount)}</td>
+                      {canEdit ? (
+                        <td className="px-3 py-2" colSpan={2}>
+                          <form action={saveBudgetExecutionAction} className="flex items-center justify-end gap-2">
+                            <input type="hidden" name="report_id" value={reportId} />
+                            <input type="hidden" name="budget_item_id" value={b.id} />
+                            <input type="hidden" name="investment_type" value={b.investment_type} />
+                            <input type="hidden" name="item_description" value={b.item_description} />
+                            <input type="hidden" name="budget_planned" value={b.planned_amount} />
+                            <input
+                              name="period_expenses"
+                              inputMode="decimal"
+                              defaultValue={gasto ? String(gasto).replace(".", ",") : ""}
+                              placeholder="0,00"
+                              className="w-28 rounded border border-slate-300 px-2 py-1.5 text-right text-sm"
+                            />
+                            <span className="w-24 text-right text-slate-600">{formatCurrency(disponivel)}</span>
+                            <button className="rounded bg-slate-900 px-3 py-1.5 text-xs text-white hover:bg-slate-800">
+                              Salvar
+                            </button>
+                          </form>
+                        </td>
+                      ) : (
+                        <>
+                          <td className="px-3 py-2 text-right">{formatCurrency(gasto)}</td>
+                          <td className="px-3 py-2 text-right font-medium">{formatCurrency(disponivel)}</td>
+                        </>
+                      )}
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -178,53 +210,12 @@ export default function ReportFinancialSection({
           </div>
         </div>
 
-        {/* Formulário para adicionar item */}
-        {canEdit && (
-          <div className="border-t border-slate-200 bg-slate-50 p-4">
-            <h4 className="mb-3 text-sm font-semibold text-slate-700">Adicionar item financeiro</h4>
-            <form action={saveFinancialItemAction} className="grid gap-3 sm:grid-cols-4">
-              <input type="hidden" name="report_id" value={reportId} />
-
-              <div>
-                <label className="mb-1 block text-xs text-slate-600">Tipo Investimento</label>
-                <select name="investment_type" required className="w-full rounded border px-3 py-2 text-sm">
-                  <option value="">Escolha um Item</option>
-                  {INVESTMENT_TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs text-slate-600">Item</label>
-                <input name="item_description" required className="w-full rounded border px-3 py-2 text-sm" />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs text-slate-600">Orçamento (R$)</label>
-                <input name="budget_planned" inputMode="decimal" className="w-full rounded border px-3 py-2 text-sm" />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs text-slate-600">Gasto Efetivo (R$)</label>
-                <input name="period_expenses" inputMode="decimal" className="w-full rounded border px-3 py-2 text-sm" />
-              </div>
-
-              <div className="sm:col-span-4 flex justify-end">
-                <button className="rounded bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800">
-                  Salvar Gasto
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
         {canEdit && (
           <div className="border-t border-slate-200 bg-blue-50 px-4 py-3 text-xs text-blue-800">
-            <strong>Resumo automático:</strong> os 5 valores acima são
-            calculados a partir do orçamento previsto e dos repasses cadastrados
-            na aba <strong>Financeiro do projeto</strong> e das despesas
-            lançadas neste relatório. Para alterá-los, edite os dados na origem.
+            <strong>Resumo automático:</strong> os valores acima são calculados
+            a partir do orçamento previsto e dos repasses cadastrados na aba{" "}
+            <strong>Financeiro do projeto</strong> e dos gastos lançados neste
+            relatório. Para alterar o orçamento, edite na origem.
           </div>
         )}
       </section>

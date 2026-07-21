@@ -112,6 +112,53 @@ export async function saveFinancialItemAction(formData: FormData) {
   }
 }
 
+/**
+ * Lança o gasto no período de um item do ORÇAMENTO DO PROJETO no relatório.
+ * O relatório puxa os itens do orçamento; a organização preenche apenas o
+ * gasto. Grava (upsert) em report_financial_items vinculado ao item do
+ * orçamento — assim o resumo financeiro (VIEW) recalcula automaticamente.
+ */
+export async function saveBudgetExecutionAction(formData: FormData) {
+  const reportId = String(formData.get("report_id") ?? "").trim();
+  const go = (q: string) => redirect(editUrl(reportId, q));
+
+  try {
+    const user = await requireUser();
+    await requireReportDraftAccess(reportId, user.id);
+
+    const budgetItemId = String(formData.get("budget_item_id") ?? "").trim();
+    if (!budgetItemId) {
+      return go(`?err=${encodeURIComponent("Item de orçamento inválido.")}`);
+    }
+
+    const supabase = createClient();
+    const { error } = await (supabase as any)
+      .from("report_financial_items")
+      .upsert(
+        {
+          report_id: reportId,
+          budget_item_id: budgetItemId,
+          investment_type: String(formData.get("investment_type") ?? "").trim(),
+          item_description: String(formData.get("item_description") ?? "").trim(),
+          budget_planned: parseNum(formData.get("budget_planned")),
+          period_expenses: parseNum(formData.get("period_expenses")),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "report_id,budget_item_id" },
+      );
+
+    if (error) {
+      throw new Error(`Falha ao lançar gasto: ${error.message}`);
+    }
+
+    revalidatePath(editUrl(reportId));
+    return go("?saved=1");
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return go(`?err=${encodeURIComponent(err instanceof Error ? err.message : "Erro ao lançar gasto.")}`);
+  }
+}
+
 export async function deleteFinancialItemAction(formData: FormData) {
   const reportId = String(formData.get("report_id") ?? "").trim();
   const itemId = String(formData.get("item_id") ?? "").trim();

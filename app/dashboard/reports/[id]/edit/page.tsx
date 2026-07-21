@@ -12,6 +12,7 @@ import {
   removeReportPhotoAction,
 } from "@/app/actions/report.actions";
 import { getReportFinancialData } from "@/services/report-financial.service";
+import { getProjectBudgetSnapshot } from "@/services/project-budget.service";
 import ReportFinancialSection from "@/components/reports/ReportFinancialSection";
 import ReportActivitiesSection from "@/components/reports/ReportActivitiesSection";
 import ReportCounterpartsSection from "@/components/reports/ReportCounterpartsSection";
@@ -122,7 +123,7 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
     String((projectFull as any).project_type ?? "").toUpperCase() ===
     "INCENTIVADO";
 
-  const [photosWithUrls, financialData, milestones, counterparts] =
+  const [photosWithUrls, financialData, milestones, projectBudget, counterparts] =
     await Promise.all([
       Promise.all(
         photos.map(async (p) => ({
@@ -132,6 +133,10 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
       ),
       getReportFinancialData(reportId),
       listProjectMilestones(String(report.project_id), user.id).catch(() => []),
+      getProjectBudgetSnapshot(String(report.project_id)).catch(() => ({
+        items: [], transfers: [],
+        totals: { total_planned: 0, total_transfers_planned: 0, total_transfers_realized: 0 },
+      })),
       isIncentivado
         ? listProjectCounterparts(String(report.project_id)).catch(() => [])
         : Promise.resolve([]),
@@ -385,6 +390,7 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
         reportId={reportId}
         canEdit={canEdit}
         items={financialData.items}
+        budgetItems={(projectBudget as any).items ?? []}
         summary={financialData.summary}
         reallocations={financialData.reallocations}
         receipts={financialData.receipts}
