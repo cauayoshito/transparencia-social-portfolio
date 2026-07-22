@@ -608,6 +608,93 @@ export async function uploadReportPhotoAction(
   }
 }
 
+/**
+ * Foto do relato/história (aparece 3x4 ao lado do relato no PDF).
+ * Guarda um único caminho em report_versions.data.__assets.relato_photo.
+ */
+export async function uploadRelatoPhotoAction(
+  reportId: string,
+  formData: FormData
+) {
+  const go = (q: string) => redirect(`/dashboard/reports/${reportId}/edit${q}`);
+
+  try {
+    const user = await requireUser();
+    const report = await getReport(reportId, user.id);
+
+    const file = formData.get("relato_photo") as File | null;
+    if (!file || typeof (file as any).arrayBuffer !== "function" || file.size === 0) {
+      return go(`?err=${encodeURIComponent("Selecione uma foto.")}`);
+    }
+    if (!(file.type || "").startsWith("image/")) {
+      return go(`?err=${encodeURIComponent("Envie um arquivo de imagem.")}`);
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      return go(`?err=${encodeURIComponent("Arquivo muito grande. Máximo: 8MB.")}`);
+    }
+
+    const now = new Date();
+    const stamp = now.toISOString().replace(/[:.]/g, "-");
+    const clean = safeFileName(file.name || "relato.jpg");
+    const path = `${reportId}/relato/${stamp}-${clean}`;
+
+    const supabase = createClient();
+    const { error: uploadErr } = await supabase.storage
+      .from(REPORTS_BUCKET)
+      .upload(path, file, {
+        upsert: false,
+        contentType: file.type || "application/octet-stream",
+      });
+    if (uploadErr) {
+      return go(`?err=${encodeURIComponent(`Falha ao enviar foto: ${uploadErr.message}`)}`);
+    }
+
+    const current = await getCurrentVersion(reportId);
+    const baseData = ((current as any)?.data as any) ?? {};
+    const assets = baseData.__assets ?? {};
+    const nextData = {
+      ...baseData,
+      __assets: {
+        ...assets,
+        relato_photo: { path, name: clean, uploadedAt: now.toISOString() },
+      },
+    };
+
+    await saveDraft(reportId, nextData as any, user.id);
+    revalidatePath(`/dashboard/reports/${reportId}/edit`);
+    return go(`?photo=1`);
+  } catch (error) {
+    if (isNextRedirectError(error)) throw error;
+    return go(
+      `?err=${encodeURIComponent(error instanceof Error ? error.message : "Falha ao enviar foto do relato.")}`
+    );
+  }
+}
+
+export async function removeRelatoPhotoAction(
+  reportId: string,
+  _formData: FormData
+) {
+  const go = (q: string) => redirect(`/dashboard/reports/${reportId}/edit${q}`);
+
+  try {
+    const user = await requireUser();
+    await getReport(reportId, user.id);
+
+    const current = await getCurrentVersion(reportId);
+    const baseData = ((current as any)?.data as any) ?? {};
+    const assets = { ...(baseData.__assets ?? {}) };
+    delete assets.relato_photo;
+
+    await saveDraft(reportId, { ...baseData, __assets: assets } as any, user.id);
+    revalidatePath(`/dashboard/reports/${reportId}/edit`);
+    return go(`?removed=1`);
+  } catch (error) {
+    if (isNextRedirectError(error)) throw error;
+    return go(`?err=${encodeURIComponent("Falha ao remover foto do relato.")}`);
+  }
+}
+
 export async function removeReportPhotoAction(
   reportId: string,
   formData: FormData

@@ -10,6 +10,8 @@ import {
   saveReportDraftFromEditorAction,
   uploadReportPhotoAction,
   removeReportPhotoAction,
+  uploadRelatoPhotoAction,
+  removeRelatoPhotoAction,
 } from "@/app/actions/report.actions";
 import { getReportFinancialData } from "@/services/report-financial.service";
 import { getProjectBudgetSnapshot } from "@/services/project-budget.service";
@@ -121,6 +123,10 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
   const photos: PhotoItem[] = Array.isArray(data?.__assets?.photos)
     ? data.__assets.photos
     : [];
+  const relatoPhoto = data?.__assets?.relato_photo ?? null;
+  const relatoPhotoUrl = relatoPhoto?.path
+    ? await signedUrlFor(relatoPhoto.path)
+    : null;
   const isIncentivado =
     String((projectFull as any).project_type ?? "").toUpperCase() ===
     "INCENTIVADO";
@@ -553,6 +559,75 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
             </button>
           </div>
         </form>
+      </section>
+
+      {/* Foto do relato (aparece 3x4 ao lado do relato no PDF) */}
+      <section className="rounded-xl border bg-white p-4">
+        <h2 className="font-semibold">Foto do relato</h2>
+        <p className="text-xs text-slate-600 mt-1">
+          Foto da pessoa do relato/história. No PDF ela aparece em formato 3x4
+          ao lado do texto do relato.
+        </p>
+
+        <div className="mt-3 flex flex-wrap items-start gap-4">
+          {relatoPhotoUrl ? (
+            <div className="flex items-start gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={relatoPhotoUrl}
+                alt="Foto do relato"
+                className="h-28 w-[84px] rounded border border-slate-200 object-cover"
+              />
+              <form
+                action={async (fd) => {
+                  "use server";
+                  if (!canEdit) return;
+                  await removeRelatoPhotoAction(reportId, fd);
+                }}
+              >
+                <button
+                  type="submit"
+                  disabled={!canEdit}
+                  className="text-sm text-red-600 hover:underline disabled:opacity-40"
+                >
+                  Remover foto
+                </button>
+              </form>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">Nenhuma foto enviada.</p>
+          )}
+
+          <form
+            action={async (formData) => {
+              "use server";
+              if (!canEdit) return;
+              await uploadRelatoPhotoAction(reportId, formData);
+            }}
+            className="flex flex-wrap items-end gap-3"
+          >
+            <div>
+              <label className="mb-1 block text-xs text-slate-600">
+                {relatoPhotoUrl ? "Trocar foto" : "Enviar foto"}
+              </label>
+              <input
+                name="relato_photo"
+                type="file"
+                accept="image/*"
+                required
+                disabled={!canEdit}
+                className="rounded border px-3 py-2 text-sm"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={!canEdit}
+              className="rounded bg-slate-900 px-4 py-2 text-white text-sm disabled:opacity-50"
+            >
+              Enviar foto
+            </button>
+          </form>
+        </div>
       </section>
     </main>
   );

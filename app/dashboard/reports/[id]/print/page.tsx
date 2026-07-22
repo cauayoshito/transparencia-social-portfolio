@@ -171,6 +171,10 @@ export default async function ReportPrintPage({ params }: Props) {
   const photosWithUrls = await Promise.all(
     photos.map(async (p) => ({ ...p, signedUrl: await signedUrlFor(p.path) })),
   );
+  const relatoPhoto = data?.__assets?.relato_photo ?? null;
+  const relatoPhotoUrl = relatoPhoto?.path
+    ? await signedUrlFor(relatoPhoto.path)
+    : null;
 
   const p = projectFull as any;
   const orgName =
@@ -732,16 +736,40 @@ export default async function ReportPrintPage({ params }: Props) {
         >
           <SectionHeader title={section.title} />
           <div className="space-y-3 p-4">
-            {section.fields.map((field: { key: string; label: string }) => (
-              <div key={field.key}>
-                <p className="text-xs font-semibold text-slate-600">
-                  {field.label}
-                </p>
-                <p className="mt-0.5 whitespace-pre-wrap border-b border-slate-100 pb-2 text-sm text-slate-900">
-                  {fallback(data?.[field.key], "—")}
-                </p>
-              </div>
-            ))}
+            {section.fields.map((field: { key: string; label: string }) => {
+              // Relato/história: mostra a foto 3x4 ao lado do texto.
+              const isRelato = field.key === "qualitativo.relato";
+              if (isRelato && relatoPhotoUrl) {
+                return (
+                  <div key={field.key}>
+                    <p className="text-xs font-semibold text-slate-600">
+                      {field.label}
+                    </p>
+                    <div className="mt-0.5 flex items-start gap-4 border-b border-slate-100 pb-2">
+                      <p className="flex-1 whitespace-pre-wrap text-sm text-slate-900">
+                        {fallback(data?.[field.key], "—")}
+                      </p>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={relatoPhotoUrl}
+                        alt="Foto do relato"
+                        className="h-[113px] w-[85px] flex-none rounded border border-slate-300 object-cover"
+                      />
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div key={field.key}>
+                  <p className="text-xs font-semibold text-slate-600">
+                    {field.label}
+                  </p>
+                  <p className="mt-0.5 whitespace-pre-wrap border-b border-slate-100 pb-2 text-sm text-slate-900">
+                    {fallback(data?.[field.key], "—")}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </section>
       ))}
