@@ -231,6 +231,10 @@ export async function saveReallocationAction(formData: FormData) {
       original_type: String(formData.get("original_type") ?? "").trim(),
       original_item: String(formData.get("original_item") ?? "").trim(),
       original_value: parseNum(formData.get("original_value")),
+      original_budget_item_id:
+        String(formData.get("original_budget_item_id") ?? "").trim() || null,
+      new_budget_item_id:
+        String(formData.get("new_budget_item_id") ?? "").trim() || null,
       new_type: String(formData.get("new_type") ?? "").trim() || null,
       new_item: String(formData.get("new_item") ?? "").trim() || null,
       reallocated_value: parseNum(formData.get("reallocated_value")),

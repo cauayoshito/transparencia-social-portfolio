@@ -191,7 +191,12 @@ export async function listReallocations(reportId: string): Promise<Reallocation[
 
 export async function upsertReallocation(
   reportId: string,
-  item: Partial<Reallocation> & { original_type: string; original_item: string }
+  item: Partial<Reallocation> & {
+    original_type: string;
+    original_item: string;
+    original_budget_item_id?: string | null;
+    new_budget_item_id?: string | null;
+  }
 ): Promise<Reallocation> {
   const supabase = createClient();
   const db = supabase as any;
@@ -201,6 +206,8 @@ export async function upsertReallocation(
     original_type: item.original_type,
     original_item: item.original_item,
     original_value: item.original_value ?? 0,
+    original_budget_item_id: item.original_budget_item_id ?? null,
+    new_budget_item_id: item.new_budget_item_id ?? null,
     new_type: item.new_type ?? null,
     new_item: item.new_item ?? null,
     reallocated_value: item.reallocated_value ?? 0,

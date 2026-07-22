@@ -9,7 +9,6 @@
  */
 
 import {
-  saveReallocationAction,
   deleteReallocationAction,
   deleteReceiptAction,
   saveBankStatementAction,
@@ -18,6 +17,7 @@ import {
   deleteReportTransferAction,
 } from "@/app/actions/report-financial.actions";
 import ReportReceiptForm from "@/components/reports/ReportReceiptForm";
+import ReportReallocationForm from "@/components/reports/ReportReallocationForm";
 
 import type {
   FinancialItem,
@@ -74,16 +74,6 @@ function formatDate(v: string | null | undefined) {
   }
 }
 
-const INVESTMENT_TYPES = [
-  "Comunicação",
-  "Materiais e Equipamentos",
-  "Recursos Humanos",
-  "Transporte e alimentação",
-  "Infraestrutura",
-  "Serviços de terceiros",
-  "Outros",
-];
-
 export default function ReportFinancialSection({
   reportId,
   canEdit,
@@ -105,6 +95,32 @@ export default function ReportFinancialSection({
       (gastoByBudget.get(String(bid)) ?? 0) + Number(r.receipt_value ?? 0),
     );
   }
+
+  // Remanejamento: sai da origem, entra no destino (ajusta o disponível).
+  const remanejByBudget = new Map<string, number>();
+  const addRem = (id: string | null | undefined, delta: number) => {
+    if (!id) return;
+    remanejByBudget.set(String(id), (remanejByBudget.get(String(id)) ?? 0) + delta);
+  };
+  for (const a of reallocations as any[]) {
+    const v = Number(a.reallocated_value ?? 0);
+    addRem(a.original_budget_item_id, -v);
+    addRem(a.new_budget_item_id, v);
+  }
+
+  const disponivelDe = (b: BudgetItemLite) =>
+    Number(b.planned_amount) -
+    (gastoByBudget.get(b.id) ?? 0) +
+    (remanejByBudget.get(b.id) ?? 0);
+
+  // Itens do orçamento com disponível, para o formulário de remanejamento.
+  const budgetItemsComDisponivel = budgetItems.map((b) => ({
+    id: b.id,
+    investment_type: b.investment_type,
+    item_description: b.item_description,
+    disponivel: disponivelDe(b),
+  }));
+
   return (
     <div className="space-y-8">
       {/* ============================================================ */}
@@ -144,7 +160,7 @@ export default function ReportFinancialSection({
               ) : (
                 budgetItems.map((b) => {
                   const gasto = gastoByBudget.get(b.id) ?? 0;
-                  const disponivel = Number(b.planned_amount) - gasto;
+                  const disponivel = disponivelDe(b);
                   return (
                     <tr key={b.id} className="hover:bg-slate-50">
                       <td className="px-3 py-2">{b.investment_type}</td>
@@ -404,46 +420,10 @@ export default function ReportFinancialSection({
         </div>
 
         {canEdit && (
-          <div className="border-t border-slate-200 bg-slate-50 p-4">
-            <h4 className="mb-3 text-sm font-semibold text-slate-700">Salvar Remanejamento</h4>
-            <form action={saveReallocationAction} className="grid gap-3 sm:grid-cols-3">
-              <input type="hidden" name="report_id" value={reportId} />
-              <div>
-                <label className="mb-1 block text-xs text-slate-600">Tipo Anterior</label>
-                <input name="original_type" required className="w-full rounded border px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-600">Item Anterior</label>
-                <input name="original_item" required className="w-full rounded border px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-600">Vl Previsto (R$)</label>
-                <input name="original_value" inputMode="decimal" className="w-full rounded border px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-600">Novo Tipo</label>
-                <select name="new_type" className="w-full rounded border px-3 py-2 text-sm">
-                  <option value="">Escolha um Item</option>
-                  {INVESTMENT_TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-600">Novo Item</label>
-                <input name="new_item" className="w-full rounded border px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-600">Valor Remanejado (R$)</label>
-                <input name="reallocated_value" inputMode="decimal" className="w-full rounded border px-3 py-2 text-sm" />
-              </div>
-              <div className="sm:col-span-3 flex justify-end">
-                <button className="rounded bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800">
-                  Salvar Remanejamento
-                </button>
-              </div>
-            </form>
-          </div>
+          <ReportReallocationForm
+            reportId={reportId}
+            budgetItems={budgetItemsComDisponivel}
+          />
         )}
       </section>
       {/* ============================================================ */}
