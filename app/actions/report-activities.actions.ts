@@ -259,6 +259,54 @@ export async function saveActivityReviewAction(formData: FormData) {
   }
 }
 
+/**
+ * Progresso de uma meta do projeto no relatório: realizado no período
+ * (manual) + avaliação. Acumulado e % são calculados na leitura.
+ */
+export async function saveGoalProgressAction(formData: FormData) {
+  const reportId = safeText(formData.get("report_id"));
+  const goalId = safeText(formData.get("goal_id"));
+  const go = (q: string) => redirect(editUrl(reportId, q));
+
+  try {
+    const user = await requireUser();
+    await requireReportDraftAccess(reportId, (user as any).id);
+
+    if (!goalId) {
+      return go(`?err=${encodeURIComponent("Meta inválida.")}`);
+    }
+
+    const raw = safeText(formData.get("realized_period"))
+      .replace(/\./g, "")
+      .replace(",", ".");
+    const realized = parseFloat(raw);
+
+    const supabase = createClient();
+    const { error } = await (supabase as any)
+      .from("report_goal_progress")
+      .upsert(
+        {
+          report_id: reportId,
+          goal_id: goalId,
+          realized_period: Number.isFinite(realized) ? realized : 0,
+          evaluation: safeText(formData.get("evaluation")) || null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "report_id,goal_id" },
+      );
+
+    if (error) throw new Error(`Falha ao salvar meta: ${error.message}`);
+
+    revalidatePath(editUrl(reportId));
+    return go("?saved=1");
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return go(
+      `?err=${encodeURIComponent(err instanceof Error ? err.message : "Erro ao salvar meta.")}`,
+    );
+  }
+}
+
 export async function deleteReportActivityAction(formData: FormData) {
   const reportId = safeText(formData.get("report_id"));
   const activityId = safeText(formData.get("activity_id"));

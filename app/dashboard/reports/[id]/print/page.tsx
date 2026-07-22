@@ -23,6 +23,7 @@ import {
 import { getProjectByIdForUser } from "@/services/projects.service";
 import { getReportFinancialData } from "@/services/report-financial.service";
 import { listProjectMilestones } from "@/services/project-milestones.service";
+import { listProjectGoals } from "@/services/project-goals.service";
 import { listProjectCounterparts } from "@/services/project-schedule.service";
 import { createClient } from "@/lib/supabase/server";
 import PrintReportButton from "@/components/reports/PrintReportButton";
@@ -211,6 +212,35 @@ export default async function ReportPrintPage({ params }: Props) {
     .eq("report_id", reportId);
   const reportTransfers = (transfersData ?? []) as any[];
 
+  // Metas do projeto + progresso + acumulado
+  const projectGoals = await listProjectGoals(String(report.project_id)).catch(
+    () => [],
+  );
+  const supabaseGoals = createClient();
+  const [{ data: gProg }, { data: gAcc }] = await Promise.all([
+    (supabaseGoals as any)
+      .from("report_goal_progress")
+      .select("goal_id, realized_period, evaluation")
+      .eq("report_id", reportId),
+    (supabaseGoals as any)
+      .from("report_goal_progress")
+      .select("goal_id, realized_period, reports!inner(project_id)")
+      .eq("reports.project_id", String(report.project_id)),
+  ]);
+  const goalProgByGoal = new Map<string, any>(
+    (gProg ?? []).map((r: any) => [r.goal_id, r]),
+  );
+  const goalAcc: Record<string, number> = {};
+  for (const r of gAcc ?? []) {
+    const gid = String((r as any).goal_id);
+    goalAcc[gid] = (goalAcc[gid] ?? 0) + Number((r as any).realized_period ?? 0);
+  }
+  const parseTarget = (v: string | null) => {
+    if (!v) return null;
+    const m = String(v).replace(/\./g, "").replace(",", ".").match(/-?\d+(\.\d+)?/);
+    return m ? Number(m[0]) : null;
+  };
+
   return (
     <main className="mx-auto max-w-4xl space-y-5 bg-white p-6 print:max-w-none print:space-y-4 print:p-0">
       {/* Barra de ações (some na impressão) */}
@@ -367,6 +397,45 @@ export default async function ReportPrintPage({ params }: Props) {
           </tbody>
         </table>
       </section>
+
+      {/* Indicadores e metas */}
+      {projectGoals.length > 0 && (
+        <section className="overflow-hidden rounded border border-slate-300 break-inside-avoid print:rounded-none">
+          <SectionHeader title="Indicadores e metas" />
+          <table className="w-full text-left text-[11px]">
+            <thead>
+              <tr className="border-b border-slate-300 bg-slate-100 font-semibold text-slate-700">
+                <th className="px-2 py-2">Objetivo / meta</th>
+                <th className="px-2 py-2">Indicador</th>
+                <th className="px-2 py-2 text-right">Meta</th>
+                <th className="px-2 py-2 text-right">No período</th>
+                <th className="px-2 py-2 text-right">Acumulado</th>
+                <th className="px-2 py-2 text-right">%</th>
+                <th className="px-2 py-2">Avaliação</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {projectGoals.map((g: any) => {
+                const p = goalProgByGoal.get(g.id);
+                const alvo = parseTarget(g.target_value);
+                const acc = goalAcc[g.id] ?? 0;
+                const pct = alvo && alvo > 0 ? Math.round((acc / alvo) * 1000) / 10 : null;
+                return (
+                  <tr key={g.id} className="align-top">
+                    <td className="px-2 py-1.5">{g.title}</td>
+                    <td className="px-2 py-1.5">{g.indicator ?? "-"}</td>
+                    <td className="px-2 py-1.5 text-right">{g.target_value ?? "-"}</td>
+                    <td className="px-2 py-1.5 text-right">{Number(p?.realized_period ?? 0)}</td>
+                    <td className="px-2 py-1.5 text-right">{acc}</td>
+                    <td className="px-2 py-1.5 text-right">{pct == null ? "-" : `${pct}%`}</td>
+                    <td className="whitespace-pre-wrap px-2 py-1.5">{p?.evaluation ?? "-"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {/* Contrapartidas (INCENTIVADO) */}
       {isIncentivado && counterparts.length > 0 && (

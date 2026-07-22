@@ -15,7 +15,9 @@ import { getReportFinancialData } from "@/services/report-financial.service";
 import { getProjectBudgetSnapshot } from "@/services/project-budget.service";
 import ReportFinancialSection from "@/components/reports/ReportFinancialSection";
 import ReportActivitiesSection from "@/components/reports/ReportActivitiesSection";
+import ReportGoalsSection from "@/components/reports/ReportGoalsSection";
 import ReportCounterpartsSection from "@/components/reports/ReportCounterpartsSection";
+import { listProjectGoals } from "@/services/project-goals.service";
 import { listProjectCounterparts } from "@/services/project-schedule.service";
 import { listProjectMilestones } from "@/services/project-milestones.service";
 import { createClient } from "@/lib/supabase/server";
@@ -164,6 +166,28 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
     ]);
   const activityReviews = activityRevData ?? [];
   const reportTransfers = transfersData ?? [];
+
+  // Metas do projeto + progresso deste relatório + acumulado (todos relatórios)
+  const projectGoals = await listProjectGoals(String(report.project_id)).catch(
+    () => [],
+  );
+  const [{ data: goalProgData }, { data: goalAccumData }] = await Promise.all([
+    (supabaseRev as any)
+      .from("report_goal_progress")
+      .select("goal_id, realized_period, evaluation")
+      .eq("report_id", reportId),
+    (supabaseRev as any)
+      .from("report_goal_progress")
+      .select("goal_id, realized_period, reports!inner(project_id)")
+      .eq("reports.project_id", String(report.project_id)),
+  ]);
+  const goalProgress = goalProgData ?? [];
+  const accumulatedByGoal: Record<string, number> = {};
+  for (const row of goalAccumData ?? []) {
+    const gid = String((row as any).goal_id);
+    accumulatedByGoal[gid] =
+      (accumulatedByGoal[gid] ?? 0) + Number((row as any).realized_period ?? 0);
+  }
   const counterpartReviews = cpRevData ?? [];
 
   const periodYear = Number(String(report.period_start ?? "").slice(0, 4));
@@ -272,6 +296,15 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
         canEdit={canEdit}
         milestones={milestones as any}
         reviews={activityReviews as any}
+      />
+
+      {/* Indicadores e metas (logo abaixo do acompanhamento de atividades) */}
+      <ReportGoalsSection
+        reportId={reportId}
+        canEdit={canEdit}
+        goals={projectGoals as any}
+        progress={goalProgress as any}
+        accumulatedByGoal={accumulatedByGoal}
       />
 
       {/* Contrapartidas (somente projetos incentivados) */}

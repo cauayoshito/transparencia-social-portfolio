@@ -17,6 +17,7 @@ import {
 import { getProjectByIdForUser } from "@/services/projects.service";
 import { getReportFinancialData } from "@/services/report-financial.service";
 import { listProjectMilestones } from "@/services/project-milestones.service";
+import { listProjectGoals } from "@/services/project-goals.service";
 import { listProjectCounterparts } from "@/services/project-schedule.service";
 import { createClient } from "@/lib/supabase/server";
 
@@ -284,6 +285,55 @@ export async function GET(
           ];
         })
       : [["Nenhuma atividade no cronograma do projeto.", "", "", ""]]),
+  ]);
+
+  // ── Indicadores e metas ──
+  const projectGoals = await listProjectGoals(String(report.project_id)).catch(
+    () => [],
+  );
+  const supabaseGoals = createClient();
+  const [{ data: gProg }, { data: gAcc }] = await Promise.all([
+    (supabaseGoals as any)
+      .from("report_goal_progress")
+      .select("goal_id, realized_period, evaluation")
+      .eq("report_id", reportId),
+    (supabaseGoals as any)
+      .from("report_goal_progress")
+      .select("goal_id, realized_period, reports!inner(project_id)")
+      .eq("reports.project_id", String(report.project_id)),
+  ]);
+  const gProgByGoal = new Map<string, any>(
+    (gProg ?? []).map((r: any) => [r.goal_id, r]),
+  );
+  const gAccByGoal: Record<string, number> = {};
+  for (const r of gAcc ?? []) {
+    const gid = String((r as any).goal_id);
+    gAccByGoal[gid] = (gAccByGoal[gid] ?? 0) + Number((r as any).realized_period ?? 0);
+  }
+  const parseTargetXlsx = (v: string | null) => {
+    if (!v) return null;
+    const m = String(v).replace(/\./g, "").replace(",", ".").match(/-?\d+(\.\d+)?/);
+    return m ? Number(m[0]) : null;
+  };
+  addSheet(wb, "Indicadores e metas", [
+    ["Objetivo / meta", "Indicador", "Meta", "Realizado no período", "Acumulado", "% execução", "Avaliação"],
+    ...(projectGoals.length
+      ? projectGoals.map((g: any) => {
+          const p = gProgByGoal.get(g.id);
+          const alvo = parseTargetXlsx(g.target_value);
+          const acc = gAccByGoal[g.id] ?? 0;
+          const pct = alvo && alvo > 0 ? Math.round((acc / alvo) * 1000) / 10 : "";
+          return [
+            text(g.title),
+            text(g.indicator, "-"),
+            text(g.target_value, "-"),
+            num(p?.realized_period ?? 0),
+            num(acc),
+            pct,
+            text(p?.evaluation, "-"),
+          ];
+        })
+      : [["Nenhuma meta cadastrada no projeto.", "", "", "", "", "", ""]]),
   ]);
 
   // ── Financeiro (orçamento do projeto + gasto = soma dos recibos) ──
