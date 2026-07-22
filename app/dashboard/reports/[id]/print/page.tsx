@@ -188,8 +188,28 @@ export default async function ReportPrintPage({ params }: Props) {
       })),
     })) ?? [];
 
-  const { items, summary, reallocations, receipts, bankStatements } =
-    financialData;
+  const { summary, reallocations, receipts, bankStatements } = financialData;
+
+  // Financeiro vem do orçamento do projeto; gasto = soma dos recibos por item.
+  const { getProjectBudgetSnapshot } = await import(
+    "@/services/project-budget.service"
+  );
+  const budget = await getProjectBudgetSnapshot(
+    String(report.project_id),
+  ).catch(() => ({ items: [] as any[] }));
+  const budgetItems = (budget as any).items ?? [];
+  const gastoByBudget = new Map<string, number>();
+  for (const r of receipts as any[]) {
+    const bid = r.budget_item_id;
+    if (!bid) continue;
+    gastoByBudget.set(String(bid), (gastoByBudget.get(String(bid)) ?? 0) + Number(r.receipt_value ?? 0));
+  }
+
+  const { data: transfersData } = await createClient()
+    .from("report_transfers" as any)
+    .select("id, amount, transfer_date, transfer_type")
+    .eq("report_id", reportId);
+  const reportTransfers = (transfersData ?? []) as any[];
 
   return (
     <main className="mx-auto max-w-4xl space-y-5 bg-white p-6 print:max-w-none print:space-y-4 print:p-0">
@@ -424,42 +444,37 @@ export default async function ReportPrintPage({ params }: Props) {
             <tr className="border-b border-slate-300 bg-slate-100 font-semibold text-slate-700">
               <th className="px-2 py-2">Tipo</th>
               <th className="px-2 py-2">Item</th>
-              <th className="px-2 py-2 text-right">Orçamento</th>
-              <th className="px-2 py-2 text-right">Gasto total</th>
-              <th className="px-2 py-2 text-right">Saldo ant.</th>
-              <th className="px-2 py-2 text-right">Gastos período</th>
-              <th className="px-2 py-2 text-right">Saldo Atual</th>
+              <th className="px-2 py-2 text-right">Orçamento previsto</th>
+              <th className="px-2 py-2 text-right">Gasto no período</th>
+              <th className="px-2 py-2 text-right">Disponível</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {items.length === 0 ? (
+            {budgetItems.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-3 py-4 text-center text-slate-500">
-                  Nenhum item financeiro cadastrado.
+                <td colSpan={5} className="px-3 py-4 text-center text-slate-500">
+                  Nenhum item no orçamento do projeto.
                 </td>
               </tr>
             ) : (
-              items.map((it) => (
-                <tr key={it.id}>
-                  <td className="px-2 py-1.5">{it.investment_type}</td>
-                  <td className="px-2 py-1.5">{it.item_description}</td>
-                  <td className="px-2 py-1.5 text-right">
-                    {formatCurrency(it.budget_planned)}
-                  </td>
-                  <td className="px-2 py-1.5 text-right">
-                    {formatCurrency(it.total_spent)}
-                  </td>
-                  <td className="px-2 py-1.5 text-right">
-                    {formatCurrency(it.previous_balance)}
-                  </td>
-                  <td className="px-2 py-1.5 text-right">
-                    {formatCurrency(it.period_expenses)}
-                  </td>
-                  <td className="px-2 py-1.5 text-right font-medium">
-                    {formatCurrency(it.current_balance)}
-                  </td>
-                </tr>
-              ))
+              budgetItems.map((b: any) => {
+                const gasto = gastoByBudget.get(b.id) ?? 0;
+                return (
+                  <tr key={b.id}>
+                    <td className="px-2 py-1.5">{b.investment_type}</td>
+                    <td className="px-2 py-1.5">{b.item_description}</td>
+                    <td className="px-2 py-1.5 text-right">
+                      {formatCurrency(b.planned_amount)}
+                    </td>
+                    <td className="px-2 py-1.5 text-right">
+                      {formatCurrency(gasto)}
+                    </td>
+                    <td className="px-2 py-1.5 text-right font-medium">
+                      {formatCurrency(Number(b.planned_amount) - gasto)}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -509,6 +524,33 @@ export default async function ReportPrintPage({ params }: Props) {
           </table>
         </div>
       </section>
+
+      {/* Repasse do recurso */}
+      {reportTransfers.length > 0 && (
+        <section className="overflow-hidden rounded border border-slate-300 break-inside-avoid print:rounded-none">
+          <SectionHeader title="Repasse do recurso" />
+          <table className="w-full text-left text-[11px]">
+            <thead>
+              <tr className="border-b border-slate-300 bg-slate-100 font-semibold text-slate-700">
+                <th className="px-2 py-2">Data</th>
+                <th className="px-2 py-2">Tipo</th>
+                <th className="px-2 py-2 text-right">Valor</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {reportTransfers.map((t: any) => (
+                <tr key={t.id}>
+                  <td className="px-2 py-1.5">{formatDate(t.transfer_date)}</td>
+                  <td className="px-2 py-1.5">{t.transfer_type ?? "-"}</td>
+                  <td className="px-2 py-1.5 text-right font-medium">
+                    {formatCurrency(t.amount)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {/* Relatório de remanejamento */}
       <section className="overflow-hidden rounded border border-slate-300 break-inside-avoid print:rounded-none">

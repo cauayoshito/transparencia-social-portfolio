@@ -253,13 +253,18 @@ export async function listReceipts(reportId: string): Promise<Receipt[]> {
 
 export async function upsertReceipt(
   reportId: string,
-  item: Partial<Receipt> & { planning_item: string; receipt_description: string }
+  item: Partial<Receipt> & {
+    planning_item: string;
+    receipt_description: string;
+    budget_item_id?: string | null;
+  }
 ): Promise<Receipt> {
   const supabase = createClient();
   const db = supabase as any;
 
   const payload = {
     report_id: reportId,
+    budget_item_id: (item as any).budget_item_id ?? null,
     planning_item: item.planning_item,
     receipt_description: item.receipt_description,
     receipt_value: item.receipt_value ?? 0,

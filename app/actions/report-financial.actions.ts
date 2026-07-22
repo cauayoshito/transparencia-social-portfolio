@@ -278,6 +278,67 @@ export async function deleteReallocationAction(formData: FormData) {
 // Seção 14: Recibos / Notas fiscais
 // ============================================================================
 
+// ============================================================================
+// Repasse do recurso lançado no relatório (valor, data, tipo)
+// ============================================================================
+
+export async function saveReportTransferAction(formData: FormData) {
+  const reportId = String(formData.get("report_id") ?? "").trim();
+  const go = (q: string) => redirect(editUrl(reportId, q));
+
+  try {
+    const user = await requireUser();
+    await requireReportDraftAccess(reportId, user.id);
+
+    const amount = parseNum(formData.get("amount"));
+    if (!amount) {
+      return go(`?err=${encodeURIComponent("Informe o valor do repasse.")}`);
+    }
+
+    const supabase = createClient();
+    const { error } = await (supabase as any).from("report_transfers").insert({
+      report_id: reportId,
+      amount,
+      transfer_date: String(formData.get("transfer_date") ?? "").trim() || null,
+      transfer_type: String(formData.get("transfer_type") ?? "").trim() || null,
+    });
+
+    if (error) throw new Error(`Falha ao lançar repasse: ${error.message}`);
+
+    revalidatePath(editUrl(reportId));
+    return go("?saved=1");
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return go(`?err=${encodeURIComponent(err instanceof Error ? err.message : "Erro ao lançar repasse.")}`);
+  }
+}
+
+export async function deleteReportTransferAction(formData: FormData) {
+  const reportId = String(formData.get("report_id") ?? "").trim();
+  const transferId = String(formData.get("transfer_id") ?? "").trim();
+  const go = (q: string) => redirect(editUrl(reportId, q));
+
+  try {
+    const user = await requireUser();
+    await requireReportDraftAccess(reportId, user.id);
+
+    const supabase = createClient();
+    const { error } = await (supabase as any)
+      .from("report_transfers")
+      .delete()
+      .eq("id", transferId)
+      .eq("report_id", reportId);
+
+    if (error) throw new Error(`Falha ao remover repasse: ${error.message}`);
+
+    revalidatePath(editUrl(reportId));
+    return go("?saved=1");
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return go(`?err=${encodeURIComponent(err instanceof Error ? err.message : "Erro ao remover repasse.")}`);
+  }
+}
+
 export async function saveReceiptAction(formData: FormData) {
   const reportId = String(formData.get("report_id") ?? "").trim();
   const go = (q: string) => redirect(editUrl(reportId, q));
@@ -322,6 +383,7 @@ export async function saveReceiptAction(formData: FormData) {
 
     await upsertReceipt(reportId, {
       id: itemId,
+      budget_item_id: String(formData.get("budget_item_id") ?? "").trim() || null,
       planning_item: String(formData.get("planning_item") ?? "").trim(),
       receipt_description: String(formData.get("receipt_description") ?? "").trim(),
       receipt_value: parseNum(formData.get("receipt_value")),

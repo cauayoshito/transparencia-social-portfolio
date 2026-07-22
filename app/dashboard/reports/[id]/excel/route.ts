@@ -286,32 +286,35 @@ export async function GET(
       : [["Nenhuma atividade no cronograma do projeto.", "", "", ""]]),
   ]);
 
-  // ── Financeiro ──
+  // ── Financeiro (orçamento do projeto + gasto = soma dos recibos) ──
+  const { getProjectBudgetSnapshot } = await import(
+    "@/services/project-budget.service"
+  );
+  const budgetSnap = await getProjectBudgetSnapshot(
+    String(report.project_id),
+  ).catch(() => ({ items: [] as any[] }));
+  const budgetItems = (budgetSnap as any).items ?? [];
+  const gastoByBudget = new Map<string, number>();
+  for (const r of receipts as any[]) {
+    const bid = r.budget_item_id;
+    if (!bid) continue;
+    gastoByBudget.set(String(bid), (gastoByBudget.get(String(bid)) ?? 0) + Number(r.receipt_value ?? 0));
+  }
+
   addSheet(wb, "Financeiro", [
-    [
-      "Tipo",
-      "Item",
-      "Orçamento",
-      "Gasto total",
-      "Remanejado total",
-      "Saldo anterior",
-      "Gastos no período",
-      "Remanej. no período",
-      "Saldo atual",
-    ],
-    ...(items.length
-      ? items.map((it) => [
-          text(it.investment_type),
-          text(it.item_description),
-          num(it.budget_planned),
-          num(it.total_spent),
-          num(it.total_reallocated),
-          num(it.previous_balance),
-          num(it.period_expenses),
-          num(it.period_realloc),
-          num(it.current_balance),
-        ])
-      : [["Nenhum item financeiro cadastrado.", "", "", "", "", "", "", "", ""]]),
+    ["Tipo", "Item", "Orçamento previsto", "Gasto no período", "Disponível"],
+    ...(budgetItems.length
+      ? budgetItems.map((b: any) => {
+          const gasto = gastoByBudget.get(b.id) ?? 0;
+          return [
+            text(b.investment_type),
+            text(b.item_description),
+            num(b.planned_amount),
+            num(gasto),
+            num(Number(b.planned_amount) - gasto),
+          ];
+        })
+      : [["Nenhum item no orçamento do projeto.", "", "", "", ""]]),
     [],
     ["Resumo financeiro (calculado automaticamente)"],
     ["Saldo Planejado", num(summary?.planned_balance)],
@@ -319,6 +322,22 @@ export async function GET(
     ["Repasse no período", num(summary?.period_transfer)],
     ["Gasto real", num(summary?.actual_expenses)],
     ["Saldo em conta", num(summary?.account_balance)],
+  ]);
+
+  // ── Repasse do recurso ──
+  const { data: transfersData } = await createClient()
+    .from("report_transfers" as any)
+    .select("amount, transfer_date, transfer_type")
+    .eq("report_id", reportId);
+  addSheet(wb, "Repasses", [
+    ["Data", "Tipo", "Valor"],
+    ...((transfersData ?? []).length
+      ? (transfersData as any[]).map((t) => [
+          t.transfer_date ? formatDate(t.transfer_date) : "-",
+          text(t.transfer_type, "-"),
+          num(t.amount),
+        ])
+      : [["Nenhum repasse lançado.", "", ""]]),
   ]);
 
   // ── Remanejamento ──

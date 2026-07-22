@@ -142,21 +142,28 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
         : Promise.resolve([]),
     ]);
 
-  // Avaliações já registradas neste relatório (atividades + contrapartidas)
+  // Avaliações + repasses registrados neste relatório
   const supabaseRev = createClient();
-  const [{ data: activityRevData }, { data: cpRevData }] = await Promise.all([
-    (supabaseRev as any)
-      .from("report_activity_reviews")
-      .select("milestone_id, execution, evaluation")
-      .eq("report_id", reportId),
-    isIncentivado
-      ? (supabaseRev as any)
-          .from("report_counterpart_reviews")
-          .select("counterpart_id, execution, comment")
-          .eq("report_id", reportId)
-      : Promise.resolve({ data: [] }),
-  ]);
+  const [{ data: activityRevData }, { data: cpRevData }, { data: transfersData }] =
+    await Promise.all([
+      (supabaseRev as any)
+        .from("report_activity_reviews")
+        .select("milestone_id, execution, evaluation")
+        .eq("report_id", reportId),
+      isIncentivado
+        ? (supabaseRev as any)
+            .from("report_counterpart_reviews")
+            .select("counterpart_id, execution, comment")
+            .eq("report_id", reportId)
+        : Promise.resolve({ data: [] }),
+      (supabaseRev as any)
+        .from("report_transfers")
+        .select("id, amount, transfer_date, transfer_type")
+        .eq("report_id", reportId)
+        .order("transfer_date", { ascending: true }),
+    ]);
   const activityReviews = activityRevData ?? [];
+  const reportTransfers = transfersData ?? [];
   const counterpartReviews = cpRevData ?? [];
 
   const periodYear = Number(String(report.period_start ?? "").slice(0, 4));
@@ -391,6 +398,7 @@ export default async function ReportEditPage({ params, searchParams }: Props) {
         canEdit={canEdit}
         items={financialData.items}
         budgetItems={(projectBudget as any).items ?? []}
+        transfers={reportTransfers as any}
         summary={financialData.summary}
         reallocations={financialData.reallocations}
         receipts={financialData.receipts}

@@ -9,15 +9,15 @@
  */
 
 import {
-  saveBudgetExecutionAction,
-  deleteFinancialItemAction,
   saveReallocationAction,
   deleteReallocationAction,
-  saveReceiptAction,
   deleteReceiptAction,
   saveBankStatementAction,
   deleteBankStatementAction,
+  saveReportTransferAction,
+  deleteReportTransferAction,
 } from "@/app/actions/report-financial.actions";
+import ReportReceiptForm from "@/components/reports/ReportReceiptForm";
 
 import type {
   FinancialItem,
@@ -34,12 +34,21 @@ type BudgetItemLite = {
   planned_amount: number;
 };
 
+type ReportTransfer = {
+  id: string;
+  amount: number;
+  transfer_date: string | null;
+  transfer_type: string | null;
+};
+
 type Props = {
   reportId: string;
   canEdit: boolean;
   items: FinancialItem[];
   /** Itens do orçamento previsto do projeto (fonte das linhas). */
   budgetItems: BudgetItemLite[];
+  /** Repasses do recurso lançados neste relatório. */
+  transfers: ReportTransfer[];
   summary: FinancialSummary | null;
   reallocations: Reallocation[];
   receipts: Receipt[];
@@ -80,16 +89,21 @@ export default function ReportFinancialSection({
   canEdit,
   items,
   budgetItems,
+  transfers,
   summary,
   reallocations,
   receipts,
   bankStatements,
 }: Props) {
-  // Gasto já lançado por item de orçamento (report_financial_items vinculado).
-  const spentByBudget = new Map<string, FinancialItem>();
-  for (const it of items) {
-    const bid = (it as any).budget_item_id;
-    if (bid) spentByBudget.set(String(bid), it);
+  // Gasto por item de orçamento = SOMA dos recibos/notas fiscais vinculados.
+  const gastoByBudget = new Map<string, number>();
+  for (const r of receipts) {
+    const bid = (r as any).budget_item_id;
+    if (!bid) continue;
+    gastoByBudget.set(
+      String(bid),
+      (gastoByBudget.get(String(bid)) ?? 0) + Number(r.receipt_value ?? 0),
+    );
   }
   return (
     <div className="space-y-8">
@@ -101,14 +115,15 @@ export default function ReportFinancialSection({
           Relatório financeiro
 </div>
         <p className="px-4 pt-3 text-xs text-slate-600">
-          Os itens vêm do <strong>Orçamento previsto do projeto</strong>. Lance
-          o <strong>gasto no período</strong> de cada item; o disponível é
+          Os itens vêm do <strong>Orçamento previsto do projeto</strong>. O{" "}
+          <strong>gasto no período</strong> é a soma das notas fiscais lançadas
+          em <strong>Relação de recibos e notas fiscais</strong>; o disponível é
           calculado automaticamente.
         </p>
 
-        {/* Itens puxados do orçamento do projeto */}
+        {/* Itens puxados do orçamento do projeto (gasto vem dos recibos) */}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-xs">
+          <table className="w-full min-w-[640px] text-left text-xs">
             <thead>
               <tr className="border-b border-slate-200 bg-blue-50 text-xs font-semibold text-slate-700">
                 <th className="px-3 py-2">Tipo</th>
@@ -116,54 +131,29 @@ export default function ReportFinancialSection({
                 <th className="px-3 py-2 text-right">Orçamento previsto</th>
                 <th className="px-3 py-2 text-right">Gasto no período</th>
                 <th className="px-3 py-2 text-right">Disponível</th>
-                {canEdit && <th className="px-3 py-2 w-24">Ação</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {budgetItems.length === 0 ? (
                 <tr>
-                  <td colSpan={canEdit ? 6 : 5} className="px-3 py-6 text-center text-slate-500">
+                  <td colSpan={5} className="px-3 py-6 text-center text-slate-500">
                     Nenhum item no orçamento previsto do projeto. Cadastre na aba
                     Financeiro do projeto.
                   </td>
                 </tr>
               ) : (
                 budgetItems.map((b) => {
-                  const spent = spentByBudget.get(b.id);
-                  const gasto = Number(spent?.period_expenses ?? 0);
+                  const gasto = gastoByBudget.get(b.id) ?? 0;
                   const disponivel = Number(b.planned_amount) - gasto;
                   return (
-                    <tr key={b.id} className="align-middle hover:bg-slate-50">
+                    <tr key={b.id} className="hover:bg-slate-50">
                       <td className="px-3 py-2">{b.investment_type}</td>
                       <td className="max-w-[200px] px-3 py-2">{b.item_description}</td>
                       <td className="px-3 py-2 text-right">{formatCurrency(b.planned_amount)}</td>
-                      {canEdit ? (
-                        <td className="px-3 py-2" colSpan={2}>
-                          <form action={saveBudgetExecutionAction} className="flex items-center justify-end gap-2">
-                            <input type="hidden" name="report_id" value={reportId} />
-                            <input type="hidden" name="budget_item_id" value={b.id} />
-                            <input type="hidden" name="investment_type" value={b.investment_type} />
-                            <input type="hidden" name="item_description" value={b.item_description} />
-                            <input type="hidden" name="budget_planned" value={b.planned_amount} />
-                            <input
-                              name="period_expenses"
-                              inputMode="decimal"
-                              defaultValue={gasto ? String(gasto).replace(".", ",") : ""}
-                              placeholder="0,00"
-                              className="w-28 rounded border border-slate-300 px-2 py-1.5 text-right text-sm"
-                            />
-                            <span className="w-24 text-right text-slate-600">{formatCurrency(disponivel)}</span>
-                            <button className="rounded bg-slate-900 px-3 py-1.5 text-xs text-white hover:bg-slate-800">
-                              Salvar
-                            </button>
-                          </form>
-                        </td>
-                      ) : (
-                        <>
-                          <td className="px-3 py-2 text-right">{formatCurrency(gasto)}</td>
-                          <td className="px-3 py-2 text-right font-medium">{formatCurrency(disponivel)}</td>
-                        </>
-                      )}
+                      <td className="px-3 py-2 text-right">{formatCurrency(gasto)}</td>
+                      <td className={`px-3 py-2 text-right font-medium ${disponivel < 0 ? "text-rose-600" : ""}`}>
+                        {formatCurrency(disponivel)}
+                      </td>
                     </tr>
                   );
                 })
@@ -219,7 +209,145 @@ export default function ReportFinancialSection({
           </div>
         )}
       </section>
+      {/* ============================================================ */}
+      {/* Relação de recibos e notas fiscais */}
+      {/* ============================================================ */}
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="bg-slate-800 px-4 py-3 text-center text-sm font-semibold text-white">
+          Relação de recibos e notas fiscais
+        </div>
+        <p className="px-4 pt-3 text-xs text-slate-600">
+          Não serão aceitas notas fiscais fora do período de atividades do relatório.
+        </p>
 
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px] text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 bg-blue-50 text-xs font-semibold text-slate-700">
+                <th className="px-3 py-2">Item Planejamento</th>
+                <th className="px-3 py-2">Item da Nota</th>
+                <th className="px-3 py-2 text-right">Valor</th>
+                <th className="px-3 py-2">Número</th>
+                <th className="px-3 py-2">Data</th>
+                <th className="px-3 py-2">Remanejado?</th>
+                {canEdit && <th className="px-3 py-2 w-16">Ações</th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {receipts.map((r) => (
+                <tr key={r.id} className="hover:bg-slate-50">
+                  <td className="px-3 py-2">{r.planning_item}</td>
+                  <td className="px-3 py-2">{r.receipt_description}</td>
+                  <td className="px-3 py-2 text-right">{formatCurrency(r.receipt_value)}</td>
+                  <td className="px-3 py-2">{r.receipt_number ?? "-"}</td>
+                  <td className="px-3 py-2">{formatDate(r.receipt_date)}</td>
+                  <td className="px-3 py-2">{r.is_reallocated ? "SIM" : "NÃO"}</td>
+                  {canEdit && (
+                    <td className="px-3 py-2">
+                      <form action={deleteReceiptAction}>
+                        <input type="hidden" name="report_id" value={reportId} />
+                        <input type="hidden" name="item_id" value={r.id} />
+                        <button className="text-rose-600 hover:underline">Excluir</button>
+                      </form>
+                    </td>
+                  )}
+                </tr>
+              ))}
+              {receipts.length === 0 && (
+                <tr>
+                  <td colSpan={canEdit ? 7 : 6} className="px-3 py-6 text-center text-slate-500">
+                    Nenhum recibo cadastrado.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {canEdit && (
+          <ReportReceiptForm reportId={reportId} budgetItems={budgetItems} />
+        )}
+      </section>
+      {/* ============================================================ */}
+      {/* Repasse do recurso */}
+      {/* ============================================================ */}
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="bg-slate-800 px-4 py-3 text-center text-sm font-semibold text-white">
+          Repasse do recurso
+        </div>
+        <p className="px-4 pt-3 text-xs text-slate-600">
+          Lance os repasses recebidos no período (valor, data e tipo). A soma
+          alimenta o <strong>Repasse no período</strong> do resumo financeiro.
+        </p>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[520px] text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 bg-emerald-50 text-xs font-semibold text-slate-700">
+                <th className="px-3 py-2">Data</th>
+                <th className="px-3 py-2">Tipo</th>
+                <th className="px-3 py-2 text-right">Valor</th>
+                {canEdit && <th className="px-3 py-2 w-16">Ações</th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {transfers.length === 0 ? (
+                <tr>
+                  <td colSpan={canEdit ? 4 : 3} className="px-3 py-6 text-center text-slate-500">
+                    Nenhum repasse lançado.
+                  </td>
+                </tr>
+              ) : (
+                transfers.map((t) => (
+                  <tr key={t.id} className="hover:bg-slate-50">
+                    <td className="px-3 py-2">{formatDate(t.transfer_date)}</td>
+                    <td className="px-3 py-2">{t.transfer_type ?? "-"}</td>
+                    <td className="px-3 py-2 text-right font-medium">{formatCurrency(t.amount)}</td>
+                    {canEdit && (
+                      <td className="px-3 py-2">
+                        <form action={deleteReportTransferAction}>
+                          <input type="hidden" name="report_id" value={reportId} />
+                          <input type="hidden" name="transfer_id" value={t.id} />
+                          <button className="text-rose-600 hover:underline">Excluir</button>
+                        </form>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {canEdit && (
+          <div className="border-t border-slate-200 bg-slate-50 p-4">
+            <h4 className="mb-3 text-sm font-semibold text-slate-700">Lançar repasse</h4>
+            <form action={saveReportTransferAction} className="grid gap-3 sm:grid-cols-4">
+              <input type="hidden" name="report_id" value={reportId} />
+              <div>
+                <label className="mb-1 block text-xs text-slate-600">Valor (R$)</label>
+                <input name="amount" inputMode="decimal" required className="w-full rounded border px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-600">Data</label>
+                <input name="transfer_date" type="date" className="w-full rounded border px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-600">Tipo</label>
+                <select name="transfer_type" className="w-full rounded border px-3 py-2 text-sm">
+                  <option value="Repasse único">Repasse único</option>
+                  <option value="Parcela">Parcela</option>
+                </select>
+              </div>
+              <div className="flex items-end justify-end">
+                <button className="rounded bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800">
+                  Lançar repasse
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </section>
       {/* ============================================================ */}
       {/* Relatório de remanejamento */}
       {/* ============================================================ */}
@@ -318,116 +446,6 @@ export default function ReportFinancialSection({
           </div>
         )}
       </section>
-
-      {/* ============================================================ */}
-      {/* Relação de recibos e notas fiscais */}
-      {/* ============================================================ */}
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="bg-slate-800 px-4 py-3 text-center text-sm font-semibold text-white">
-          Relação de recibos e notas fiscais
-        </div>
-        <p className="px-4 pt-3 text-xs text-slate-600">
-          Não serão aceitas notas fiscais fora do período de atividades do relatório.
-        </p>
-
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px] text-left text-xs">
-            <thead>
-              <tr className="border-b border-slate-200 bg-blue-50 text-xs font-semibold text-slate-700">
-                <th className="px-3 py-2">Item Planejamento</th>
-                <th className="px-3 py-2">Item da Nota</th>
-                <th className="px-3 py-2 text-right">Valor</th>
-                <th className="px-3 py-2">Número</th>
-                <th className="px-3 py-2">Data</th>
-                <th className="px-3 py-2">Remanejado?</th>
-                {canEdit && <th className="px-3 py-2 w-16">Ações</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {receipts.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50">
-                  <td className="px-3 py-2">{r.planning_item}</td>
-                  <td className="px-3 py-2">{r.receipt_description}</td>
-                  <td className="px-3 py-2 text-right">{formatCurrency(r.receipt_value)}</td>
-                  <td className="px-3 py-2">{r.receipt_number ?? "-"}</td>
-                  <td className="px-3 py-2">{formatDate(r.receipt_date)}</td>
-                  <td className="px-3 py-2">{r.is_reallocated ? "SIM" : "NÃO"}</td>
-                  {canEdit && (
-                    <td className="px-3 py-2">
-                      <form action={deleteReceiptAction}>
-                        <input type="hidden" name="report_id" value={reportId} />
-                        <input type="hidden" name="item_id" value={r.id} />
-                        <button className="text-rose-600 hover:underline">Excluir</button>
-                      </form>
-                    </td>
-                  )}
-                </tr>
-              ))}
-              {receipts.length === 0 && (
-                <tr>
-                  <td colSpan={canEdit ? 7 : 6} className="px-3 py-6 text-center text-slate-500">
-                    Nenhum recibo cadastrado.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {canEdit && (
-          <div className="border-t border-slate-200 bg-slate-50 p-4">
-            <h4 className="mb-3 text-sm font-semibold text-slate-700">Adicionar recibo</h4>
-            <form action={saveReceiptAction} className="grid gap-3 sm:grid-cols-3" encType="multipart/form-data">
-              <input type="hidden" name="report_id" value={reportId} />
-              <div>
-                <label className="mb-1 block text-xs text-slate-600">Item do Planejamento</label>
-                <select name="planning_item" required className="w-full rounded border px-3 py-2 text-sm">
-                  <option value="">Escolha um Item</option>
-                  {items.map((it) => (
-                    <option key={it.id} value={it.item_description}>{it.item_description}</option>
-                  ))}
-                  <option value="Outro">Outro</option>
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-600">Item da Nota</label>
-                <input name="receipt_description" required className="w-full rounded border px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-600">Valor (R$)</label>
-                <input name="receipt_value" inputMode="decimal" className="w-full rounded border px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-600">Enviar a Nota Fiscal</label>
-                <input name="receipt_file" type="file" accept="image/*,application/pdf" className="w-full rounded border px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-600">Número da Nota</label>
-                <input name="receipt_number" className="w-full rounded border px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-600">Data</label>
-                <input name="receipt_date" type="date" className="w-full rounded border px-3 py-2 text-sm" />
-              </div>
-              <div className="flex items-end gap-3">
-                <label className="flex items-center gap-2 text-xs text-slate-600">
-                  <span>Item Remanejado</span>
-                  <select name="is_reallocated" className="rounded border px-2 py-1 text-sm">
-                    <option value="false">NÃO</option>
-                    <option value="true">SIM</option>
-                  </select>
-                </label>
-              </div>
-              <div className="sm:col-span-3 flex justify-end">
-                <button className="rounded bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800">
-                  Salvar Recibo
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-      </section>
-
       {/* ============================================================ */}
       {/* Extratos Bancários */}
       {/* ============================================================ */}
@@ -485,6 +503,12 @@ export default function ReportFinancialSection({
           </div>
         )}
       </section>
+
+@@SEC::Relatório de remanejamento@@
+
+@@SEC::Relação de recibos e notas fiscais@@
+
+@@SEC::Extratos Bancários@@
     </div>
   );
 }
